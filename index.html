@@ -80,6 +80,7 @@ a{color:var(--c)}
   <label style="margin:2px 0 0"><input type="checkbox" id="rev" checked>بازبینی نهایی با هوش مصنوعی (کندتر، ولی اشتباه کمتر)</label>
   <button class="go" id="go" type="button">بساز</button>
 </div>
+<button class="go" id="stop" type="button" hidden style="background:var(--r);color:#fff">⏹ توقف</button>
 <div id="log" role="status" aria-live="polite"></div>
 
 <div class="bar">
@@ -157,12 +158,13 @@ const PROFILES=[
 ];
 const sel=$('#model');
 const prof=()=>PROFILES.find(x=>x.re.test(sel.value))||{t:1,p:.95,note:'مدل ناشناس: دمای 1.0 و top_p 0.95.'};
+let stopped=false,curAc=null,probeStop=null;
 let dir=DIRS[0][0],vers=[],html='',errs=[],lastCut=false;
 const showNote=()=>{$('#mn').textContent=prof().note};
 $('#key').value=L('key')||'';$('#tok').value=L('tok')||'';if(L('base'))$('#base').value=L('base');
 const base=()=>$('#base').value.trim().replace(/\/+$/,'');
 const log=(t,bad,clr)=>{const e=$('#log');if(clr)e.textContent='';if(!t)return;const d=document.createElement('div');if(bad)d.className='e';d.textContent=t;e.appendChild(d);e.scrollTop=e.scrollHeight};
-const busy=b=>['go','fix','chg','up2','undo'].forEach(i=>{const e=$('#'+i);if(e)e.disabled=b});
+const busy=b=>{['go','fix','chg','up2','undo'].forEach(i=>{const e=$('#'+i);if(e)e.disabled=b});$('#stop').hidden=!b};
 ['key','tok','base'].forEach(k=>['change','input'].forEach(ev=>$('#'+k).addEventListener(ev,()=>L(k,$('#'+k).value))));
 sel.addEventListener('change',()=>{L('model',sel.value);showNote()});
 DIRS.forEach(([v,n],i)=>{const b=document.createElement('button');b.type='button';b.textContent=n;b.setAttribute('aria-pressed',String(i===0));
@@ -212,14 +214,15 @@ const wait=t=>new Promise(r=>setTimeout(r,t));
 async function ask(msgs,max,label){
   const P=prof();let useK=!!P.k,mx=max;lastCut=false;
   for(let t=0;t<6;t++){
+    if(stopped)throw new Error('متوقف شد');
     const body={model:sel.value,messages:msgs,stream:true,temperature:P.t,top_p:P.p,max_tokens:mx};
     if(useK)body.top_k=P.k;
-    const ac=new AbortController();let last=Date.now();const wd=setInterval(()=>{if(Date.now()-last>150000)ac.abort()},5000);
+    const ac=new AbortController();curAc=ac;let last=Date.now();const wd=setInterval(()=>{if(Date.now()-last>150000)ac.abort()},5000);
     try{
       const r=await fetch(base()+'/chat/completions',{method:'POST',signal:ac.signal,headers:{'Content-Type':'application/json',Authorization:'Bearer '+$('#key').value.trim()},body:JSON.stringify(body)});
       if(!r.ok){
         const x=await r.text();
-        if((r.status===503||r.status===429)&&t<4){log('سرور شلوغه، دوباره تلاش می‌کنم...');await wait(2500*(t+1));last=Date.now();continue}
+        if((r.status===503||r.status===429)&&t<4){log('سرور شلوغه، دوباره تلاش می‌کنم...');await wait(2500*(t+1));continue}
         if(r.status===400||r.status===422){
           if(/max_tokens|context|too (large|long)|exceed/i.test(x)&&mx>4000){mx=Math.floor(mx/2);log('سقف خروجی رو کم کردم: '+mx);continue}
           if(useK){useK=false;log('top_k قبول نشد؛ بدونش ادامه می‌دم.');continue}
@@ -248,7 +251,7 @@ async function ask(msgs,max,label){
       }
       buf+=dec.decode();if(buf.trim())handle(buf);
       return out;
-    }catch(e){if(e.name==='AbortError')throw new Error('سرور بیشتر از ۲ دقیقه جواب نداد؛ دوباره امتحان کن.');throw e}
+    }catch(e){if(e.name==='AbortError'&&stopped)throw new Error('متوقف شد');if(e.name==='AbortError')throw new Error('سرور بیشتر از ۲ دقیقه جواب نداد؛ دوباره امتحان کن.');throw e}
     finally{clearInterval(wd)}
   }
   throw new Error('سرور جواب نداد؛ چند دقیقه بعد دوباره امتحان کن.');
@@ -259,6 +262,32 @@ function extract(t){
   if(/<\/think>/.test(t))t=t.split('</think>').pop();
   const m=t.match(/```html\s*([\s\S]*?)```/i)||t.match(/```html\s*([\s\S]*)$/i);
   return (m?m[1]:(t.match(/<!DOCTYPE[\s\S]*<\/html>/i)||[''])[0]).trim();
+}
+/* letter-spacing فقط وقتی ایراده که روی عنصری با متن فارسی بیاد (ستاره، سال و اعداد لاتین ایرادی ندارن) */
+function lsScan(h,fix){
+  const bad=[];let doc=null;
+  try{doc=new DOMParser().parseFromString(h,'text/html')}catch(e){}
+  const out=h.replace(/(<style[^>]*>)([\s\S]*?)(<\/style>)/gi,(all,a,css,c)=>{
+    const nc=css.replace(/([^{}]+)\{([^{}]*)\}/g,(rule,sel,decl)=>{
+      const d=decl.match(/letter-spacing\s*:\s*([^;}]+);?/i);
+      if(!d||/^\s*(0(px|em|rem)?|normal)\s*$/i.test(d[1])||sel.indexOf('@')>-1)return rule;
+      let fa=false;
+      if(!doc)fa=true;
+      else for(const s1 of sel.split(',')){
+        if(/::?(before|after|placeholder|marker)/i.test(s1))continue;
+        const q=s1.replace(/::?[\w-]+(\([^)]*\))?/g,'').trim();
+        if(!q)continue;
+        let els=[];
+        try{els=[...doc.querySelectorAll(q)]}catch(e){fa=true;break}
+        if(els.some(el=>/[\u0600-\u06FF]/.test(el.textContent||'')&&!el.closest('[lang=en],.latin'))){fa=true;break}
+      }
+      if(!fa)return rule;
+      bad.push(sel.trim().split(/\s+/).slice(-1)[0].slice(0,30));
+      return fix?sel+'{'+decl.replace(/letter-spacing\s*:\s*[^;}]+;?/i,'')+'}':rule;
+    });
+    return a+nc+c;
+  });
+  return {html:fix?out:h,bad:[...new Set(bad)].slice(0,4)};
 }
 function check(h){
   const p=[];
@@ -301,12 +330,8 @@ function check(h){
       if(!PF.test(v))bad.push(v.slice(0,40));
     }
     if(bad.length)p.push('Persian page: every font-family list must also contain a Persian-capable font (Vazirmatn, Lalezar, ...). Missing in: '+[...new Set(bad)].slice(0,3).join(' | '));
-    const ls=[];
-    for(const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)){
-      const d=m[2].match(/letter-spacing\s*:\s*([^;}]+)/i);
-      if(d&&!/^\s*(0(px|em|rem)?|normal)\s*$/i.test(d[1])&&!/lang|\.latin/i.test(m[1]))ls.push(m[1].trim().split(/\s+/).slice(-1)[0].slice(0,30));
-    }
-    if(ls.length)p.push('Persian page: remove letter-spacing (it breaks joined Persian letters) from: '+[...new Set(ls)].slice(0,4).join(', ')+'. Use it only on Latin text with lang="en" or class latin');
+    const ls=lsScan(h,false).bad;
+    if(ls.length)p.push('Persian page: remove letter-spacing (it breaks joined Persian letters) from: '+ls.join(', ')+'. Use it only on Latin text with lang="en" or class latin');
   }
   /* JavaScript: syntax check without running, ids, forbidden calls */
   const re=/<script([^>]*)>([\s\S]*?)<\/script>/gi;let m,js='';
@@ -394,7 +419,7 @@ function probe(h){
     f.setAttribute('sandbox','allow-scripts');f.setAttribute('aria-hidden','true');f.tabIndex=-1;
     f.style.cssText='position:fixed;left:0;top:0;width:360px;height:600px;min-height:0;border:0;opacity:.01;pointer-events:none;z-index:-1';
     const finish=met=>{
-      if(done)return;done=true;clearTimeout(tm);removeEventListener('message',on);f.remove();
+      if(done)return;done=true;probeStop=null;clearTimeout(tm);removeEventListener('message',on);f.remove();
       const out=[...new Set(found)].slice(0,3);
       if(met){
         if(met.text<60)out.push('the page shows almost no text: JavaScript must not be needed to show the main content');
@@ -409,7 +434,7 @@ function probe(h){
       if(e.data.err)found.push('JavaScript runtime error: '+e.data.err);
       if(e.data.probe)finish(e.data.probe);
     }
-    addEventListener('message',on);
+    addEventListener('message',on);probeStop=()=>finish(null);
     f.srcdoc=withHook(h,PROBE);document.body.appendChild(f);
     tm=setTimeout(()=>finish(null),9000);
   });
@@ -428,17 +453,17 @@ async function review(h){
   try{
     log('۴) بازبینی نهایی (QA)...');
     const raw=await ask([{role:'system',content:SYS},{role:'user',content:REVIEW+'\n\n```html\n'+h+'\n```'}],32000,'۴) بازبینی:');
-    const h2=extract(raw);
+    let h2=extract(raw);if(h2)h2=lsScan(h2,true).html;
     if(!h2||h2.length<h.length*.7){log('بازبینی کامل نبود؛ نسخه‌ی اول نگه داشته شد.');return h}
     if(h2===h){log('بازبینی: ایرادی پیدا نشد.');return h}
     let p=check(h2);if(!p.length)p=await probe(h2);
     if(p.length){log('نسخه‌ی بازبینی‌شده ایراد داشت؛ نسخه‌ی اول نگه داشته شد.');return h}
     log('بازبینی چند ایراد رو اصلاح کرد.');return h2;
-  }catch(e){log('بازبینی انجام نشد؛ نسخه‌ی اول نگه داشته شد.');return h}
+  }catch(e){if(stopped)throw e;log('بازبینی انجام نشد؛ نسخه‌ی اول نگه داشته شد.');return h}
 }
 /* هر درخواست مستقل از قبلی‌هاست: سایت فعلی همراه درخواست فرستاده می‌شه، پس «نسخه قبلی» و ویرایش همیشه با هم می‌خونن */
 async function gen(text,fresh){
-  busy(true);log('',0,1);
+  stopped=false;busy(true);log('',0,1);
   try{
     let u;
     if(fresh){
@@ -451,16 +476,22 @@ async function gen(text,fresh){
         if(bb&&!/<think>/.test(bb)){u+='\n\nDesign brief (follow it):\n'+bb;log('طرح آماده شد:\n'+bb.slice(0,420))}
       }
     }else u='Here is the current site (index.html):\n```html\n'+html+'\n```\n\nTask: '+text;
-    let msgs=[{role:'system',content:SYS},{role:'user',content:u}];
+    let msgs=[{role:'system',content:SYS},{role:'user',content:u}],best='',shown=false;
     for(let i=0;i<4;i++){
+      if(stopped)throw new Error('متوقف شد');
       log('۲) دارم کد می‌نویسم...');
-      const raw=await ask(msgs,32000,'۲) کد:'),h=extract(raw);
+      const raw=await ask(msgs,32000,'۲) کد:');let h=extract(raw);
+      if(h)h=lsScan(h,true).html;
+      if(!h)log('پاسخ مدل (ناقص): '+raw.replace(/\s+/g,' ').slice(0,200),1);
+      if(h&&best&&h.length<best.length*.5){log('پاسخ خیلی کوتاه بود ('+h.length+' نویسه)؛ دوباره می‌پرسم.',1);continue}
+      if(stopped)throw new Error('متوقف شد');
+      if(h)best=h;
       let p=h?check(h):['reply with one complete ```html block'];
-      if(!p.length){log('۳) دارم سایت رو تست می‌کنم (صفحه‌ی موبایل ۳۶۰، کلیک روی دکمه‌ها)...');p=await probe(h)}
+      if(!p.length){log('۳) دارم سایت رو تست می‌کنم (صفحه‌ی موبایل ۳۶۰، کلیک روی دکمه‌ها)...');p=await probe(h);if(stopped)throw new Error('متوقف شد')}
       if(!p.length){
         let fin=h;
         if(fresh&&$('#rev').checked)fin=await review(h);
-        show(fin);
+        show(fin);shown=true;
         log('✓ همه چک‌ها (نحو، ساختار، فونت فارسی، موبایل، اجرا) قبول شد. آماده‌ست.');return;
       }
       if(i<3){
@@ -468,11 +499,13 @@ async function gen(text,fresh){
         const last=msgs[msgs.length-1];
         if(lastCut||!h)msgs=[...msgs.slice(0,-1),{role:'user',content:last.content+'\n\nYour previous answer was cut off or invalid ('+p.join('; ')+'). Write a more compact but complete version: under 500 lines, fewer sections, shorter CSS. Return the full file in one ```html block.'}];
         else msgs=[...msgs,{role:'assistant',content:'```html\n'+h+'\n```'},{role:'user',content:'Problems found: '+p.join('; ')+'. Fix them and return the full corrected file in one ```html block.'}];
-      }else{if(h)show(h);log('بعد از ۳ بار اصلاح این ایرادها مونده: '+p.join('، ')+'. درخواست رو دقیق‌تر بنویس یا «ارتقای طراحی» بزن.',1)}
+      }else{if(best){show(best);shown=true}log('بعد از ۳ بار اصلاح این ایرادها مونده: '+p.join('، ')+'. درخواست رو دقیق‌تر بنویس یا «ارتقای طراحی» بزن.',1)}
     }
-  }catch(e){log('خطا: '+(e.name==='TypeError'?'اتصال برقرار نشد (اینترنت، VPN یا محدودیت CORS سرور).':e.message),1)}
-  finally{busy(false)}
+    if(!shown&&best){show(best);log('نسخه‌ی کامل آخر نمایش داده شد.',1)}
+  }catch(e){if(stopped){log('⏹ متوقف شد. سایت قبلی سر جاشه.');return}log('خطا: '+(e.name==='TypeError'?'اتصال برقرار نشد (اینترنت، VPN یا محدودیت CORS سرور).':e.message),1)}
+  finally{busy(false);curAc=null;probeStop=null}
 }
+$('#stop').onclick=()=>{stopped=true;if(curAc)curAc.abort();if(probeStop)probeStop();log('⏹ دارم متوقف می‌کنم...')};
 const need=()=>{if(!$('#key').value.trim()){$('#set').open=true;log('API key رو توی تنظیمات وارد کن.',1,1);return false}L('model',sel.value);return true};
 $('#go').onclick=()=>{const q=$('#q').value.trim();if(!q)return log('اول بنویس چه سایتی می‌خوای.',1,1);if(need())gen(q,true)};
 const applyChange=()=>{const q=$('#ch').value.trim();if(!html)return log('اول یه سایت بساز.',1,1);if(!q)return;if(need()){gen('Change the current site as follows and return the FULL updated file in one ```html block: '+q,false);$('#ch').value=''}};
