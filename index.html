@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>استودیو ساخت سایت با هوش مصنوعی</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono&display=swap">
+<style>
+:root{--bg:#06060F;--g:rgba(255,255,255,.06);--l:rgba(255,255,255,.14);--f:#EDEFFA;--m:#8F94B8;--c:#2DE2E6;--r:#FF4D6D;color-scheme:dark;
+  --sans:Vazirmatn,system-ui,Tahoma,sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--f);font-family:var(--sans);line-height:1.8;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px);overflow-x:hidden}
+body::before{content:"";position:fixed;inset:-20%;z-index:-1;pointer-events:none;
+  background:radial-gradient(40% 35% at 20% 25%,rgba(45,226,230,.22),transparent 70%),radial-gradient(38% 34% at 80% 70%,rgba(255,77,109,.2),transparent 70%);animation:dr 22s ease-in-out infinite alternate}
+@keyframes dr{to{transform:translate3d(6%,-5%,0) scale(1.15)}}
+main{max-width:900px;margin:0 auto;padding:22px 14px 70px}
+h1{font-size:clamp(34px,9vw,64px);line-height:1.3;margin:26px 0 8px;font-weight:900}
+h1 b{background:linear-gradient(100deg,var(--c),var(--r));-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{color:var(--m);margin:0 0 22px;max-width:34em}
+.glass,details{background:var(--g);border:1px solid var(--l);border-radius:14px;padding:14px 16px;margin:12px 0;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+summary{cursor:pointer;font-weight:700}
+label{display:block;font-size:13px;color:var(--m);margin:10px 0 4px}
+input,select,textarea{width:100%;background:rgba(0,0,0,.35);color:var(--f);border:1px solid var(--l);border-radius:9px;padding:10px;font:inherit}
+input[type=checkbox]{width:auto;margin-inline:0 8px;vertical-align:middle}
+textarea{min-height:100px;resize:vertical;font-size:16px}
+button{font:inherit;cursor:pointer;border:1px solid var(--l);background:var(--g);color:var(--f);border-radius:9px;padding:7px 14px}
+button:hover{border-color:var(--c)}
+button[aria-pressed=true]{background:var(--f);color:var(--bg);border-color:var(--f)}
+.go{width:100%;margin-top:12px;padding:14px;font-weight:900;font-size:17px;color:#04121a;border:0;background:linear-gradient(100deg,var(--c),#7CF0B8 55%,var(--r))}
+.go:hover{filter:brightness(1.1)}
+button:disabled{opacity:.5;cursor:wait}
+:focus-visible{outline:2px solid var(--c);outline-offset:2px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.chips button{font-size:13px}
+#log{font-family:var(--mono);font-size:12.5px;direction:rtl;white-space:pre-wrap;word-break:break-word;color:#9BF6E3;background:rgba(0,0,0,.45);border:1px solid var(--l);border-radius:12px;padding:12px;margin:12px 0;max-height:190px;overflow:auto;min-height:0}
+#log:empty{display:none}
+#log .e{color:var(--r)}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:16px 0 8px}
+.bar .sp{flex:1}
+.stage{display:flex;justify-content:center;background:rgba(0,0,0,.35);border:1px solid var(--l);border-radius:14px;padding:12px;overflow:auto}
+#fw{width:100%;max-width:100%;flex:none;transition:width .35s ease}
+iframe{width:100%;height:72vh;min-height:440px;border:0;border-radius:8px;background:#fff;display:block}
+#code{direction:ltr;text-align:left;font-family:var(--mono);font-size:12.5px;min-height:460px}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.row>input{flex:1;min-width:160px}
+a{color:var(--c)}
+#gst,.err{white-space:pre-wrap;word-break:break-word;font-size:14px;color:var(--m)}
+.err{color:var(--r)}
+#mn{font-size:13px;color:var(--m);margin:8px 0 0}
+#ms{font-size:14px;margin:10px 0 0;white-space:pre-wrap;word-break:break-word}
+#ms.ok{color:#7CF0B8}#ms.bad{color:var(--r)}#ms.wait{color:var(--m)}
+[hidden]{display:none!important}
+@media(prefers-reduced-motion:reduce){body::before{animation:none}#fw{transition:none}}
+</style>
+</head>
+<body>
+<main>
+<h1>هر سایتی که بخوای،<br><b>با یک جمله.</b></h1>
+<p class="sub">بنویس چی می‌خوای. اول طرح می‌کشه، بعد کد می‌نویسه، خودش چکش می‌کنه و آماده‌ی آپلود تحویل می‌ده.</p>
+
+<details id="set"><summary>تنظیمات API</summary>
+  <label for="key">API key</label>
+  <input id="key" type="password" autocomplete="off" dir="ltr" placeholder="dahl_...">
+  <label for="base">Base URL</label>
+  <input id="base" dir="ltr" value="https://inference.dahl.global/v1">
+  <label for="model">مدل</label>
+  <div class="row" style="margin-top:0"><select id="model" dir="ltr" style="flex:1"><option>MiniMaxAI/MiniMax-M2.7</option></select><button id="rf" type="button">بروزرسانی</button></div>
+  <p id="ms" role="status" aria-live="polite"></p>
+  <p id="mn"></p>
+</details>
+
+<div class="glass">
+  <label style="margin-top:0">حال‌وهوای طراحی</label>
+  <div class="chips" id="dirs"></div>
+  <label for="q">چه سایتی می‌خوای؟</label>
+  <textarea id="q" placeholder="مثلاً: یه سایت برای ویدیو بساز که ویدیوها رو توی گالری نشون بده و پلیر خفن داشته باشه"></textarea>
+  <div class="chips" id="ex"></div>
+  <label style="margin:6px 0 0"><input type="checkbox" id="two" checked>طراحی دو مرحله‌ای (اول طرح، بعد کد؛ کیفیت بالاتر، کمی کندتر)</label>
+  <label style="margin:2px 0 0"><input type="checkbox" id="rev" checked>بازبینی نهایی با هوش مصنوعی (کندتر، ولی اشتباه کمتر)</label>
+  <button class="go" id="go" type="button">بساز</button>
+</div>
+<div id="log" role="status" aria-live="polite"></div>
+
+<div class="bar">
+  <button id="t1" aria-pressed="true" type="button">پیش‌نمایش</button><button id="t2" aria-pressed="false" type="button">کد</button>
+  <span class="sp"></span>
+  <button id="d1" type="button" aria-pressed="false">موبایل</button><button id="d2" type="button" aria-pressed="false">تبلت</button><button id="d3" type="button" aria-pressed="true">دسکتاپ</button>
+  <button id="fs" type="button">تمام‌صفحه</button>
+</div>
+<div id="pv"><div class="stage"><div id="fw"><iframe id="fr" sandbox="allow-scripts allow-forms allow-modals" title="پیش‌نمایش سایت"></iframe></div></div>
+  <div id="eb" class="glass err" hidden><div id="et"></div><button id="fix" type="button" style="margin-top:8px">رفع خطا با هوش مصنوعی</button></div></div>
+<div id="cv" hidden><textarea id="code" readonly aria-label="کد سایت"></textarea>
+  <div class="row"><button id="cp" type="button">کپی کد</button><button id="dl" type="button">دانلود index.html</button></div></div>
+
+<div class="glass">
+  <label for="ch" style="margin-top:0">تغییر بده</label>
+  <div class="row" style="margin-top:0"><input id="ch" placeholder="مثلاً: رنگ‌ها گرم‌تر بشه و یه بخش قیمت‌ها اضافه کن"><button id="chg" type="button">اعمال</button></div>
+  <div class="row"><button id="up2" type="button">ارتقای طراحی (نقد و بهتر کردن)</button><button id="undo" type="button">نسخه قبلی</button></div>
+</div>
+
+<details><summary>آپلود در گیت‌هاب</summary>
+  <label for="tok">GitHub token (دسترسی ساخت repo و نوشتن محتوا)</label>
+  <input id="tok" type="password" autocomplete="off" dir="ltr">
+  <label for="repo">اسم repo</label>
+  <input id="repo" dir="ltr" value="my-ai-site">
+  <label><input type="checkbox" id="pages" checked>GitHub Pages هم فعال بشه</label>
+  <label><input type="checkbox" id="priv">repo خصوصی باشه (Pages ممکنه کار نکنه)</label>
+  <button class="go" id="up" type="button">آپلود</button>
+  <div id="gst" role="status" aria-live="polite"></div>
+</details>
+</main>
+<script>
+const $=s=>document.querySelector(s);
+const L=(k,v)=>{try{return v===undefined?localStorage.getItem(k):localStorage.setItem(k,v)}catch(e){return null}};
+const SYS=`You are a senior front-end engineer and designer. You turn a short request into ONE finished, memorable, bug-free website (single index.html, inline CSS and JS).
+OUTPUT: exactly ONE complete \`\`\`html code block, then one short summary line in the user's language. Nothing else. Think briefly (a short plan only), then write. Keep the file under about 600 lines and never stop in the middle.
+
+DESIGN
+- Commit fully to the given aesthetic direction ("auto" = choose what fits the subject). "Modern" or "clean" is not a direction. Never fall back to a default look (Inter/Roboto/Arial, purple gradient on white, a row of three identical icon cards).
+- Type: ONE distinctive display font + ONE refined body font from Google Fonts (one link tag), each with a fallback stack. Strong size scale.
+- Color: CSS variables; one dominant color + one sharp accent; layered backgrounds (gradients, inline SVG patterns, glows). Text contrast at least 4.5:1.
+- Layout: asymmetry, big type, generous spacing, one unforgettable hero built from CSS/SVG/emoji. No external images.
+- Motion: CSS only. ONE orchestrated page-load sequence (all finished within 2 seconds) plus meaningful hover/focus states. Respect prefers-reduced-motion.
+- Copy: real, specific, believable text in the user's language. Every person, brand, film, place and phone number must be INVENTED. Never use names of real people, celebrities, companies, brands or news events.
+
+PERSIAN / RTL (when the request is Persian)
+- Use html lang="fa" dir="rtl". Fonts must contain the Persian letters. Allowed Google Fonts only: Vazirmatn (best for body), Lalezar (display), Markazi Text, Noto Naskh Arabic, Noto Sans Arabic, Amiri, Scheherazade New. Never Tajawal and never Latin-only fonts for Persian text. Put a Persian font in EVERY font-family list, for example font-family:"Playfair Display","Vazirmatn",serif.
+- Never use letter-spacing or italics on Persian text (letter-spacing breaks the joined letters). letter-spacing is allowed only for Latin text inside an element with lang="en" or class latin.
+- Body line-height 1.9, font-size at least 16px. Prefer Persian digits. Use logical CSS (margin-inline, padding-inline, inset-inline-start, text-align:start). Never set direction:ltr on cards or sections; use it only for code, emails and phone numbers.
+
+ROBUST LAYOUT (must work at 360px width)
+- *{box-sizing:border-box} img,svg,video{max-width:100%;height:auto} body{margin:0}. No fixed widths wider than 100%. Use clamp(), min(), flex-wrap, and grid with repeat(auto-fit,minmax(min(100%,16rem),1fr)). Add min-width:0 to flex and grid children and overflow-wrap:anywhere to long text. Do not use overflow-x:hidden to hide a layout bug; fix the cause.
+- Never place text elements with position:absolute where they can overlap other text on small screens (scroll hints, badges, captions). Use flex or grid with gap and padding. Hero: min-height:100vh then min-height:100svh, with padding-bottom for any bottom element.
+- Navigation must work on mobile: show all links in a horizontally scrollable row or a details menu. Never hide navigation with display:none without an alternative.
+- Touch targets at least 44px high. Fixed or sticky bars must not cover content.
+- Content must be visible without JavaScript. Hidden start states (opacity:0, translate) are allowed only under html.js, and the script must add the class js to document.documentElement first. For scroll reveals use IntersectionObserver only if it exists and reveal everything after 2 seconds anyway.
+
+CODE (the file is machine-checked and tested on a 360px screen with clicks on every button; any failure means a rewrite)
+- Starts with <!DOCTYPE html>, ends with </html>. No TODO, no lorem ipsum, no "...".
+- The only external resource is the Google Fonts link. No external images, scripts or CSS url(). Use CSS/SVG/emoji for visuals. Video: a real video element with controls plus a visible button for input type=file with URL.createObjectURL; never an empty src attribute; the picker must stay usable after the user cancels.
+- Every id is unique. Every href is a real #section-id that exists; never href="#" and never an empty href. Buttons are button type="button".
+- JavaScript: plain ES2017, one script tag at the end of the body, ASCII quotes only, const/let, no import/export, no alert/confirm/prompt. Define every variable and function before use. Every id used in JavaScript must exist in the HTML. Null-check every element before use. Never call querySelector with a value that can be "#" or empty. Wrap localStorage in try/catch. Put the real text in the HTML; use JavaScript only to enhance it.
+- Close every tag, brace and parenthesis. Semantic HTML (header, nav, main, section, footer), aria-label on icon-only buttons, visible :focus-visible.
+- Do not add features nobody asked for. If unclear, choose the simplest assumption.
+
+FINAL CHECK (silently, before answering): invented names only; a Persian font in every font-family; no letter-spacing on Persian; nothing sticks out or overlaps at 360px; main content visible without JavaScript; no dead links or buttons; every id used in JavaScript exists; file complete.`;
+const REVIEW=`You are a strict QA engineer for web pages. Below is a finished page. Audit it against every rule and fix each violation with minimal changes. Keep the design, copy and features. Rules: 1) every font-family list contains a Persian-capable font (Vazirmatn, Lalezar, Markazi Text, Noto Naskh Arabic, Noto Sans Arabic, Amiri) 2) no letter-spacing on Persian text 3) no horizontal overflow and no overlapping text at 360px width 4) navigation usable on mobile 5) main content visible without JavaScript, no animation delay over 2 seconds 6) no real people, brands or celebrities: replace them with invented names 7) every id unique; every href points to an existing id; no href="#" 8) every id used in JavaScript exists, elements are null-checked, no click handler can throw 9) file or video pickers recover after cancel and there is no empty src 10) the file is complete and ends with </html>. Return the FULL corrected file in one \`\`\`html block. If nothing needs fixing, return the file unchanged.`;
+const BRIEF=`You are an art director. Given a website request and an aesthetic direction, reply with a SHORT design brief (max 120 words, same language as the request): subject and audience, chosen direction, palette as 4 named hex colors, display font and body font (Google Fonts; for Persian use only Vazirmatn, Lalezar, Markazi Text, Noto Naskh Arabic or Amiri), the hero idea, the list of sections, and the single signature motion. All people and brands must be invented, never real. No code. Think very briefly.`;
+const DIRS=[['auto','خودکار'],['neon cyber-noir with glowing neon accents and glass panels','سایبر نئون'],['editorial magazine: huge serif type, tight grid, rules and captions','مجله‌ای'],['neo-brutalist: thick borders, flat bold colors, oversized type, hard shadows','برالیست'],['retro-futuristic: CRT glow, mono type, scanlines, amber/teal','رترو فیوچر'],['luxury minimal: lots of whitespace, refined serif, one metallic accent','مینیمال لوکس'],['playful gaming: bold shapes, vivid gradients, sticker-like elements','گیمینگ']];
+const EX=[['ویدیو','یه سایت برای ویدیو بساز: گالری ویدیو، پلیر خفن و لیست پخش'],['فیلم','یه صفحه معرفی برای یه فیلم خیالی با طراحی سینمایی بساز'],['شخصی','یه سایت شخصی برای یه برنامه‌نویس با پروژه‌ها و تماس بساز'],['فروشگاه','یه صفحه فروش برای یه محصول خیالی بساز']];
+/* قوانین رسمی هر مدل (از صفحه مدل‌ها): دما، top_p و top_k */
+const PROFILES=[
+  {re:/minimax/i,t:1,p:.95,k:40,note:'MiniMax M2.7: طبق توصیه سازنده دما 1.0، top_p 0.95 و top_k 40. همیشه فکر می‌کنه (<think>) و فکرش از سقف خروجی کم می‌کنه.'},
+  {re:/kimi/i,t:1,p:.95,note:'Kimi K2.6: حالت thinking با دمای 1.0 و top_p 0.95. دمای اشتباه کیفیت رو خیلی پایین میاره.'},
+  {re:/deepseek/i,t:1,p:1,note:'DeepSeek V4 Flash: دمای 1.0 و top_p 1.0 (0.95 فقط برای عامل‌ها). فکر کردنش پیش‌فرض روشنه.'}
+];
+const sel=$('#model');
+const prof=()=>PROFILES.find(x=>x.re.test(sel.value))||{t:1,p:.95,note:'مدل ناشناس: دمای 1.0 و top_p 0.95.'};
+let dir=DIRS[0][0],vers=[],html='',errs=[],lastCut=false;
+const showNote=()=>{$('#mn').textContent=prof().note};
+$('#key').value=L('key')||'';$('#tok').value=L('tok')||'';if(L('base'))$('#base').value=L('base');
+const base=()=>$('#base').value.trim().replace(/\/+$/,'');
+const log=(t,bad,clr)=>{const e=$('#log');if(clr)e.textContent='';if(!t)return;const d=document.createElement('div');if(bad)d.className='e';d.textContent=t;e.appendChild(d);e.scrollTop=e.scrollHeight};
+const busy=b=>['go','fix','chg','up2','undo'].forEach(i=>{const e=$('#'+i);if(e)e.disabled=b});
+['key','tok','base'].forEach(k=>['change','input'].forEach(ev=>$('#'+k).addEventListener(ev,()=>L(k,$('#'+k).value))));
+sel.addEventListener('change',()=>{L('model',sel.value);showNote()});
+DIRS.forEach(([v,n],i)=>{const b=document.createElement('button');b.type='button';b.textContent=n;b.setAttribute('aria-pressed',String(i===0));
+  b.onclick=()=>{dir=v;$('#dirs').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)))};$('#dirs').appendChild(b)});
+EX.forEach(([n,t])=>{const b=document.createElement('button');b.type='button';b.textContent=n;b.onclick=()=>{$('#q').value=t};$('#ex').appendChild(b)});
+const ms=(t,c)=>{const e=$('#ms');e.textContent=t;e.className=c||''};
+const root=()=>base().replace(/\/v1$/,'');
+async function models(){
+  const b=$('#rf');b.disabled=true;b.textContent='در حال بررسی...';ms('دارم به سرور وصل می‌شم...','wait');
+  let ok=false;
+  try{
+    const r=await fetch(base()+'/models');
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const j=await r.json();
+    if(!j||!Array.isArray(j.data)||!j.data.length)throw new Error('لیست مدل خالی بود');
+    const keep=L('model')||sel.value;
+    sel.innerHTML='';j.data.forEach(m=>sel.add(new Option(m.id,m.id)));
+    const d=[...sel.options].find(o=>/MiniMax-M2\.7$/.test(o.value));
+    if(keep&&[...sel.options].some(o=>o.value===keep))sel.value=keep;else if(d)sel.value=d.value;
+    ok=true;
+    let t='✅ اتصال برقرار شد. '+j.data.length+' مدل پیدا شد.';
+    const k=$('#key').value.trim();
+    if(!k)t+='\nکلید هنوز وارد نشده؛ فقط اتصال چک شد.';
+    else{
+      try{
+        const q=await fetch(root()+'/tokens/current',{headers:{Authorization:'Bearer '+k}});
+        if(q.ok){const v=await q.json();t+='\n✅ کلید درسته. موجودی: '+Number(v.available_tokens).toLocaleString('en-US')+' توکن.'}
+        else if(q.status===401)t+='\n❌ کلید نامعتبره؛ یه کلید جدید بساز.';
+        else t+='\n⚠️ چک کلید جواب نداد (کد '+q.status+').';
+      }catch(e){t+='\n⚠️ چک کلید ممکن نشد؛ موقع ساخت سایت معلوم می‌شه.'}
+    }
+    ms(t,'ok');
+  }catch(e){
+    let why;
+    if(e.name==='TypeError'||/Failed to fetch|NetworkError|Load failed/i.test(e.message)){
+      let net=false;
+      try{await fetch(base()+'/models',{mode:'no-cors'});net=true}catch(x){}
+      why=net?'❌ سرور در دسترسه ولی اجازه نمی‌ده مرورگر بهش وصل بشه (محدودیت CORS). راه‌حلش ساخت یه پروکسی کوچیکه؛ بهم بگو.'
+              :'❌ به سرور نمی‌رسم. اینترنت یا VPN رو چک کن، یا آدرس Base URL غلطه.';
+    }else why='❌ خطا: '+e.message;
+    ms(why,'bad');
+  }finally{b.disabled=false;b.textContent='بروزرسانی'}
+  showNote();return ok;
+}
+$('#rf').onclick=models;models();
+const wait=t=>new Promise(r=>setTimeout(r,t));
+async function ask(msgs,max,label){
+  const P=prof();let useK=!!P.k,mx=max;lastCut=false;
+  for(let t=0;t<6;t++){
+    const body={model:sel.value,messages:msgs,stream:true,temperature:P.t,top_p:P.p,max_tokens:mx};
+    if(useK)body.top_k=P.k;
+    const ac=new AbortController();let last=Date.now();const wd=setInterval(()=>{if(Date.now()-last>150000)ac.abort()},5000);
+    try{
+      const r=await fetch(base()+'/chat/completions',{method:'POST',signal:ac.signal,headers:{'Content-Type':'application/json',Authorization:'Bearer '+$('#key').value.trim()},body:JSON.stringify(body)});
+      if(!r.ok){
+        const x=await r.text();
+        if((r.status===503||r.status===429)&&t<4){log('سرور شلوغه، دوباره تلاش می‌کنم...');await wait(2500*(t+1));last=Date.now();continue}
+        if(r.status===400||r.status===422){
+          if(/max_tokens|context|too (large|long)|exceed/i.test(x)&&mx>4000){mx=Math.floor(mx/2);log('سقف خروجی رو کم کردم: '+mx);continue}
+          if(useK){useK=false;log('top_k قبول نشد؛ بدونش ادامه می‌دم.');continue}
+        }
+        throw new Error(r.status+' - '+(r.status===401?'کلید نامعتبر است':r.status===402?'توکن‌ها تمام شده؛ یه کلید جدید بساز':x.slice(0,200)));
+      }
+      log(label+' شروع شد...');
+      const rd=r.body.getReader(),dec=new TextDecoder();let buf='',out='',th=0,n=0;
+      const handle=raw=>{
+        const l=raw.trim();
+        if(!l.startsWith('data:'))return;
+        const d=l.slice(5).trim();if(!d||d==='[DONE]')return;
+        let j;try{j=JSON.parse(d)}catch(e){return}
+        if(j.error)throw new Error(typeof j.error==='string'?j.error:(j.error.message||'خطای سرور'));
+        const ch=j.choices&&j.choices[0];if(!ch)return;
+        const dl=ch.delta||{},rs=dl.reasoning_content||dl.reasoning||'';
+        if(ch.finish_reason==='length')lastCut=true;
+        if(rs)th+=rs.length;
+        if(dl.content)out+=dl.content;
+        if(++n%25===0){const lc=$('#log').lastChild;if(lc)lc.textContent=label+' فکر: '+th+' | نوشته: '+out.length+' نویسه'}
+      };
+      for(;;){
+        const {done,value}=await rd.read();if(done)break;last=Date.now();
+        buf+=dec.decode(value,{stream:true});const ls=buf.split('\n');buf=ls.pop();
+        ls.forEach(handle);
+      }
+      buf+=dec.decode();if(buf.trim())handle(buf);
+      return out;
+    }catch(e){if(e.name==='AbortError')throw new Error('سرور بیشتر از ۲ دقیقه جواب نداد؛ دوباره امتحان کن.');throw e}
+    finally{clearInterval(wd)}
+  }
+  throw new Error('سرور جواب نداد؛ چند دقیقه بعد دوباره امتحان کن.');
+}
+function extract(t){
+  t=t.replace(/<think>[\s\S]*?<\/think>/g,'');
+  if(/<think>/.test(t))return '';
+  if(/<\/think>/.test(t))t=t.split('</think>').pop();
+  const m=t.match(/```html\s*([\s\S]*?)```/i)||t.match(/```html\s*([\s\S]*)$/i);
+  return (m?m[1]:(t.match(/<!DOCTYPE[\s\S]*<\/html>/i)||[''])[0]).trim();
+}
+function check(h){
+  const p=[];
+  const body=h.replace(/<script[\s\S]*?<\/script>/gi,'');
+  const css=[...h.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)].map(x=>x[1]).join('\n');
+  if(!/^<!DOCTYPE html/i.test(h))p.push('must start with <!DOCTYPE html>');
+  if(!/<\/html>\s*$/i.test(h))p.push('file is incomplete: it must end with </html>');
+  if(h.length<3500)p.push('design is too minimal: make it richer and more polished');
+  if(/lorem ipsum|rest of (the )?code|(\/\/|<!-{2}|\/\*)\s*(TODO|\.\.\.)/i.test(h))p.push('remove placeholders (TODO, lorem ipsum, "...")');
+  if(!/viewport/i.test(h))p.push('add the viewport meta tag');
+  if(!/<body[\s>]/i.test(h))p.push('add a <body> element');
+  if((h.match(/<style[\s>]/gi)||[]).length!==(h.match(/<\/style>/gi)||[]).length)p.push('unclosed <style> tag');
+  if((h.match(/<script[\s>]/gi)||[]).length!==(h.match(/<\/script>/gi)||[]).length)p.push('unclosed <script> tag');
+  const extSrc=/<(?:script|img|iframe|source|video|audio|embed|track)\b[^>]*\bsrc\s*=\s*["']?(?:https?:)?\/\//i.test(h);
+  const extLink=[...h.matchAll(/<link\b[^>]*>/gi)].some(x=>/href\s*=\s*["']?(?:https?:)?\/\//i.test(x[0])&&!/fonts\.(googleapis|gstatic)\.com/i.test(x[0]));
+  if(extSrc||extLink)p.push('no external images, scripts or stylesheets: use inline CSS/SVG only (only the Google Fonts link is allowed)');
+  if(/url\(\s*["']?(?:https?:)?\/\//i.test(h))p.push('no remote images in CSS url(): use inline SVG or gradients');
+  if(/font-family:\s*["']?(Inter|Roboto|Arial|Helvetica)\b/i.test(h))p.push('do not use Inter/Roboto/Arial/Helvetica as the main font: choose distinctive Google Fonts');
+  if(/@keyframes|animation:/.test(h)&&!/prefers-reduced-motion/.test(h))p.push('add a prefers-reduced-motion rule for animations');
+  if(/\b(src|href)\s*=\s*["']\s*["']/i.test(h))p.push('empty src/href attribute: remove it or give it a real value');
+  /* ids and links */
+  const idl=[...body.matchAll(/\sid\s*=\s*["']([^"']+)["']/g)].map(x=>x[1]);
+  const dup=[...new Set(idl.filter((x,i)=>idl.indexOf(x)!==i))].slice(0,4);
+  if(dup.length)p.push('duplicate ids: '+dup.join(', ')+' (every id must be unique)');
+  const hs=[...body.matchAll(/href\s*=\s*["']#([^"']*)["']/g)].map(x=>x[1]);
+  if(hs.some(x=>x===''))p.push('dead link href="#": point every link to a real #section-id, or use a button');
+  const miss=[...new Set(hs.filter(x=>x&&!idl.includes(x)))].slice(0,4);
+  if(miss.length)p.push('links point to ids that do not exist: '+miss.join(', '));
+  /* Persian / RTL */
+  const fa=/<html[^>]*\blang\s*=\s*["']?(fa|ar)/i.test(h)||/<html[^>]*\bdir\s*=\s*["']?rtl/i.test(h)||(h.match(/[\u0600-\u06FF]/g)||[]).length>40;
+  if(fa){
+    if(!/<html[^>]*\bdir\s*=\s*["']?rtl/i.test(h))p.push('Persian page: use <html lang="fa" dir="rtl">');
+    const PF=/Vazirmatn|Lalezar|Markazi Text|Noto (?:Naskh|Sans|Kufi) Arabic|Amiri|Scheherazade New|Lateef|Mirza/i;
+    if(!/fonts\.googleapis\.com\/css2?\?[^"']*family=(?:Vazirmatn|Lalezar|Markazi\+Text|Noto\+(?:Naskh|Sans|Kufi)\+Arabic|Amiri|Scheherazade\+New|Lateef|Mirza)/i.test(h))p.push('Persian page: load a Persian-capable Google Font (Vazirmatn, Lalezar, Markazi Text, Noto Naskh Arabic or Amiri) in the fonts link');
+    const bad=[];
+    for(const m of css.matchAll(/(font-family|--[\w-]*(?:font|family|sans|serif|display|heading)[\w-]*)\s*:\s*([^;}{]+)/gi)){
+      const v=m[2].trim(),isFF=m[1].toLowerCase()==='font-family';
+      if(/var\(|inherit|initial|unset/i.test(v)||/mono|code|courier|consolas|emoji|symbol/i.test(v))continue;
+      if(!isFF&&!/serif|cursive|fantasy|system-ui|ui-|["']/i.test(v))continue;
+      if(!PF.test(v))bad.push(v.slice(0,40));
+    }
+    if(bad.length)p.push('Persian page: every font-family list must also contain a Persian-capable font (Vazirmatn, Lalezar, ...). Missing in: '+[...new Set(bad)].slice(0,3).join(' | '));
+    const ls=[];
+    for(const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)){
+      const d=m[2].match(/letter-spacing\s*:\s*([^;}]+)/i);
+      if(d&&!/^\s*(0(px|em|rem)?|normal)\s*$/i.test(d[1])&&!/lang|\.latin/i.test(m[1]))ls.push(m[1].trim().split(/\s+/).slice(-1)[0].slice(0,30));
+    }
+    if(ls.length)p.push('Persian page: remove letter-spacing (it breaks joined Persian letters) from: '+[...new Set(ls)].slice(0,4).join(', ')+'. Use it only on Latin text with lang="en" or class latin');
+  }
+  /* JavaScript: syntax check without running, ids, forbidden calls */
+  const re=/<script([^>]*)>([\s\S]*?)<\/script>/gi;let m,js='';
+  while((m=re.exec(h))){
+    const ty=(m[1].match(/type\s*=\s*["']?([^"'\s>]+)/i)||[])[1];
+    if(/\bsrc\s*=/.test(m[1])||(ty&&!/^(text|application)\/(x-)?(java|ecma)script$/i.test(ty)))continue;
+    js+=m[2]+'\n';
+    try{new Function(m[2])}catch(e){p.push('JavaScript syntax error: '+e.message)}
+  }
+  if(/\b(alert|confirm|prompt)\s*\(/.test(js))p.push('do not use alert/confirm/prompt');
+  const ids=new Set([...h.matchAll(/\bid\s*=\s*["']([^"']+)["']/g)].map(x=>x[1]));
+  [...js.matchAll(/\.id\s*=\s*["']([^"']+)["']/g)].forEach(x=>ids.add(x[1]));
+  [...js.matchAll(/setAttribute\(\s*["']id["']\s*,\s*["']([^"']+)["']/g)].forEach(x=>ids.add(x[1]));
+  const used=[...js.matchAll(/getElementById\(\s*["']([^"']+)["']\s*\)/g)].map(x=>x[1]).concat([...js.matchAll(/querySelector\(\s*["']#([\w-]+)["']\s*\)/g)].map(x=>x[1]));
+  const mi=[...new Set(used.filter(x=>!ids.has(x)))].slice(0,5);
+  if(mi.length)p.push('JavaScript uses ids that do not exist in the HTML: '+mi.join(', '));
+  return p;
+}
+/* این تابع‌ها داخل صفحه‌ی پیش‌نمایش/تست اجرا می‌شن (به‌صورت متن تزریق می‌شن؛ داخلشون کامنت و تگ اسکریپت نذار) */
+function hookBody(){
+  addEventListener('error',function(e){
+    if(/ResizeObserver/.test(e.message||''))return;
+    try{parent.postMessage({err:(e.message||'error')+' (line '+e.lineno+')'},'*')}catch(x){}
+  });
+  addEventListener('unhandledrejection',function(e){
+    try{parent.postMessage({err:'Promise: '+((e.reason&&e.reason.message)||e.reason)},'*')}catch(x){}
+  });
+  document.addEventListener('click',function(e){
+    var t=e.target,a=t&&t.closest?t.closest('a[href^="#"]'):null;
+    if(!a)return;
+    e.preventDefault();
+    var h=a.getAttribute('href')||'';
+    if(h.length>1){
+      var id=h.slice(1);
+      try{id=decodeURIComponent(id)}catch(x){}
+      var el=document.getElementById(id);
+      if(el&&el.scrollIntoView)el.scrollIntoView({behavior:'smooth'});
+    }
+  });
+}
+const HOOK='<scr'+'ipt>('+hookBody.toString()+')();<\/scr'+'ipt>';
+function probeBody(){
+  function post(o){try{parent.postMessage(o,'*')}catch(e){}}
+  function nm(e){return e.tagName.toLowerCase()+(typeof e.className==='string'&&e.className.trim()?'.'+e.className.trim().split(/\s+/)[0]:'')}
+  function own(e){return Array.prototype.some.call(e.childNodes,function(n){return n.nodeType===3&&n.nodeValue.trim().length>0})}
+  function eff(e){var o=1,a=e;while(a&&a!==document.documentElement){var s=getComputedStyle(a);o*=parseFloat(s.opacity);if(s.visibility==='hidden')return 0;a=a.parentElement}return o}
+  function clipped(e){var a=e.parentElement;while(a&&a!==document.body&&a!==document.documentElement){if(/(hidden|auto|scroll|clip)/.test(getComputedStyle(a).overflowX))return true;a=a.parentElement}return false}
+  function moved(e){var a=e;while(a&&a!==document.documentElement){if(getComputedStyle(a).transform!=='none')return true;a=a.parentElement}return false}
+  function abs(e){var a=e;while(a&&a!==document.body){var q=getComputedStyle(a).position;if(q==='absolute'||q==='fixed')return true;a=a.parentElement}return false}
+  setTimeout(function(){
+    var m={text:0,hid:0,off:[],ov:[]};
+    try{
+      var W=innerWidth,H=innerHeight;
+      m.text=(document.body.innerText||'').trim().length;
+      var hs=document.querySelectorAll('h1,h2,h3,p,a,button,li');
+      for(var i=0;i<hs.length;i++){var e=hs[i],r=e.getBoundingClientRect();
+        if(r.width>0&&r.height>0&&r.top<H&&r.bottom>0&&(e.textContent||'').trim()&&eff(e)<.05)m.hid++}
+      var c=document.querySelectorAll('h1,h2,h3,h4,p,a,button,li,span,label,small,div'),tx=[];
+      for(var j=0;j<c.length&&tx.length<160;j++){var el=c[j];if(!own(el))continue;var q=el.getBoundingClientRect();
+        if(q.width<4||q.height<4)continue;
+        if(m.off.length<3&&(q.right>W+3||q.left<-3)&&!clipped(el)&&!moved(el)&&getComputedStyle(el).position!=='fixed')m.off.push(nm(el));
+        if(q.top<H&&q.bottom>0&&eff(el)>.3)tx.push({e:el,r:q})}
+      for(var a=0;a<tx.length&&m.ov.length<2;a++)for(var b=a+1;b<tx.length&&m.ov.length<2;b++){
+        var A=tx[a],B=tx[b];if(A.e.contains(B.e)||B.e.contains(A.e))continue;
+        var ix=Math.min(A.r.right,B.r.right)-Math.max(A.r.left,B.r.left),iy=Math.min(A.r.bottom,B.r.bottom)-Math.max(A.r.top,B.r.top);
+        if(ix>0&&iy>0){var sm=Math.min(A.r.width*A.r.height,B.r.width*B.r.height);
+          if(ix*iy>.4*sm&&(abs(A.e)||abs(B.e)))m.ov.push(nm(A.e)+' / '+nm(B.e))}}
+    }catch(e){}
+    var cl=document.querySelectorAll('button,[role=button],summary,a[href^="#"]');
+    for(var k=0;k<cl.length&&k<30;k++){try{cl[k].click()}catch(e){}}
+    setTimeout(function(){post({probe:m})},500);
+  },3200);
+}
+const PROBE='<scr'+'ipt>('+probeBody.toString()+')();<\/scr'+'ipt>';
+const withHook=(h,extra)=>{
+  const add=HOOK+(extra||'');
+  if(/<head(\s[^>]*)?>/i.test(h))return h.replace(/<head(\s[^>]*)?>/i,m=>m+add);
+  if(/<html(\s[^>]*)?>/i.test(h))return h.replace(/<html(\s[^>]*)?>/i,m=>m+add);
+  return add+h;
+};
+/* تست اجرا: سایت رو توی یه صفحه‌ی نامرئی ۳۶۰ پیکسلی باز می‌کنه، همه‌ی دکمه‌ها رو کلیک می‌کنه و مشکلات رو برمی‌گردونه */
+function probe(h){
+  return new Promise(res=>{
+    const f=document.createElement('iframe'),found=[];let done=false,tm;
+    f.setAttribute('sandbox','allow-scripts');f.setAttribute('aria-hidden','true');f.tabIndex=-1;
+    f.style.cssText='position:fixed;left:0;top:0;width:360px;height:600px;min-height:0;border:0;opacity:.01;pointer-events:none;z-index:-1';
+    const finish=met=>{
+      if(done)return;done=true;clearTimeout(tm);removeEventListener('message',on);f.remove();
+      const out=[...new Set(found)].slice(0,3);
+      if(met){
+        if(met.text<60)out.push('the page shows almost no text: JavaScript must not be needed to show the main content');
+        if(met.hid>0)out.push('content in the first screen stays invisible (opacity 0) after 3 seconds: show the first screen without waiting for JavaScript or long animation delays');
+        if(met.off&&met.off.length)out.push('text sticks out of a 360px-wide screen: '+met.off.join(', ')+'. Use wrapping, min-width:0 and flexible widths');
+        if(met.ov&&met.ov.length)out.push('text overlaps other text on a 360px-wide screen: '+met.ov.join(' ; ')+'. Replace position:absolute with normal flow, flex or grid');
+      }
+      res(out);
+    };
+    function on(e){
+      if(e.source!==f.contentWindow||!e.data)return;
+      if(e.data.err)found.push('JavaScript runtime error: '+e.data.err);
+      if(e.data.probe)finish(e.data.probe);
+    }
+    addEventListener('message',on);
+    f.srcdoc=withHook(h,PROBE);document.body.appendChild(f);
+    tm=setTimeout(()=>finish(null),9000);
+  });
+}
+function show(h,keep){
+  html=h;errs=[];$('#eb').hidden=true;$('#code').value=h;
+  if(!keep){vers.push(h);if(vers.length>15)vers.shift()}
+  $('#fr').srcdoc=withHook(h);
+}
+addEventListener('message',e=>{
+  if(e.source!==$('#fr').contentWindow||!e.data||!e.data.err)return;
+  if(errs.length<20)errs.push(e.data.err);
+  $('#et').textContent='خطای جاوااسکریپت در سایت: '+errs.slice(0,3).join(' | ');$('#eb').hidden=false;
+});
+async function review(h){
+  try{
+    log('۴) بازبینی نهایی (QA)...');
+    const raw=await ask([{role:'system',content:SYS},{role:'user',content:REVIEW+'\n\n```html\n'+h+'\n```'}],32000,'۴) بازبینی:');
+    const h2=extract(raw);
+    if(!h2||h2.length<h.length*.7){log('بازبینی کامل نبود؛ نسخه‌ی اول نگه داشته شد.');return h}
+    if(h2===h){log('بازبینی: ایرادی پیدا نشد.');return h}
+    let p=check(h2);if(!p.length)p=await probe(h2);
+    if(p.length){log('نسخه‌ی بازبینی‌شده ایراد داشت؛ نسخه‌ی اول نگه داشته شد.');return h}
+    log('بازبینی چند ایراد رو اصلاح کرد.');return h2;
+  }catch(e){log('بازبینی انجام نشد؛ نسخه‌ی اول نگه داشته شد.');return h}
+}
+/* هر درخواست مستقل از قبلی‌هاست: سایت فعلی همراه درخواست فرستاده می‌شه، پس «نسخه قبلی» و ویرایش همیشه با هم می‌خونن */
+async function gen(text,fresh){
+  busy(true);log('',0,1);
+  try{
+    let u;
+    if(fresh){
+      const dd=dir==='auto'?'auto (choose what fits the subject)':dir;
+      u='Request: '+text+'\nAesthetic direction: '+dd;
+      if($('#two').checked){
+        log('۱) دارم طرح طراحی می‌کشم...');
+        const b=await ask([{role:'system',content:BRIEF},{role:'user',content:u}],6000,'۱) طرح:');
+        const bb=b.replace(/<think>[\s\S]*?<\/think>/g,'').replace(/^[\s\S]*<\/think>/,'').trim();
+        if(bb&&!/<think>/.test(bb)){u+='\n\nDesign brief (follow it):\n'+bb;log('طرح آماده شد:\n'+bb.slice(0,420))}
+      }
+    }else u='Here is the current site (index.html):\n```html\n'+html+'\n```\n\nTask: '+text;
+    let msgs=[{role:'system',content:SYS},{role:'user',content:u}];
+    for(let i=0;i<4;i++){
+      log('۲) دارم کد می‌نویسم...');
+      const raw=await ask(msgs,32000,'۲) کد:'),h=extract(raw);
+      let p=h?check(h):['reply with one complete ```html block'];
+      if(!p.length){log('۳) دارم سایت رو تست می‌کنم (صفحه‌ی موبایل ۳۶۰، کلیک روی دکمه‌ها)...');p=await probe(h)}
+      if(!p.length){
+        let fin=h;
+        if(fresh&&$('#rev').checked)fin=await review(h);
+        show(fin);
+        log('✓ همه چک‌ها (نحو، ساختار، فونت فارسی، موبایل، اجرا) قبول شد. آماده‌ست.');return;
+      }
+      if(i<3){
+        log('ایراد پیدا شد، اصلاح می‌کنم ('+(i+1)+'/3): '+p.join('، '),1);
+        const last=msgs[msgs.length-1];
+        if(lastCut||!h)msgs=[...msgs.slice(0,-1),{role:'user',content:last.content+'\n\nYour previous answer was cut off or invalid ('+p.join('; ')+'). Write a more compact but complete version: under 500 lines, fewer sections, shorter CSS. Return the full file in one ```html block.'}];
+        else msgs=[...msgs,{role:'assistant',content:'```html\n'+h+'\n```'},{role:'user',content:'Problems found: '+p.join('; ')+'. Fix them and return the full corrected file in one ```html block.'}];
+      }else{if(h)show(h);log('بعد از ۳ بار اصلاح این ایرادها مونده: '+p.join('، ')+'. درخواست رو دقیق‌تر بنویس یا «ارتقای طراحی» بزن.',1)}
+    }
+  }catch(e){log('خطا: '+(e.name==='TypeError'?'اتصال برقرار نشد (اینترنت، VPN یا محدودیت CORS سرور).':e.message),1)}
+  finally{busy(false)}
+}
+const need=()=>{if(!$('#key').value.trim()){$('#set').open=true;log('API key رو توی تنظیمات وارد کن.',1,1);return false}L('model',sel.value);return true};
+$('#go').onclick=()=>{const q=$('#q').value.trim();if(!q)return log('اول بنویس چه سایتی می‌خوای.',1,1);if(need())gen(q,true)};
+const applyChange=()=>{const q=$('#ch').value.trim();if(!html)return log('اول یه سایت بساز.',1,1);if(!q)return;if(need()){gen('Change the current site as follows and return the FULL updated file in one ```html block: '+q,false);$('#ch').value=''}};
+$('#chg').onclick=applyChange;
+$('#ch').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing){e.preventDefault();applyChange()}});
+$('#up2').onclick=()=>{if(!html)return log('اول یه سایت بساز.',1,1);if(need())gen('Critique the current design like a ruthless art director (typography hierarchy, color, hero impact, spacing rhythm, motion, generic-looking parts), then fix everything you found. Keep the content and features. Return the FULL updated file in one ```html block.',false)};
+$('#fix').onclick=()=>{if(!html||!errs.length)return;if(need())gen('The page has JavaScript errors: '+errs.slice(0,3).join(' | ')+'. Fix them and return the full file in one ```html block.',false)};
+$('#undo').onclick=()=>{if(vers.length<2)return log('نسخه قبلی وجود نداره.',1,1);vers.pop();show(vers[vers.length-1],true);log('به نسخه قبلی برگشتی.',0,1)};
+const tab=n=>{$('#pv').hidden=n!==1;$('#cv').hidden=n!==2;$('#t1').setAttribute('aria-pressed',String(n===1));$('#t2').setAttribute('aria-pressed',String(n===2))};
+$('#t1').onclick=()=>tab(1);$('#t2').onclick=()=>tab(2);
+[['d1','390px'],['d2','768px'],['d3','100%']].forEach(([i,w])=>$('#'+i).onclick=()=>{$('#fw').style.width=w;['d1','d2','d3'].forEach(x=>$('#'+x).setAttribute('aria-pressed',String(x===i)))});
+const blobUrl=()=>{const u=URL.createObjectURL(new Blob([html],{type:'text/html'}));setTimeout(()=>URL.revokeObjectURL(u),120000);return u};
+$('#fs').onclick=()=>{if(html)window.open(blobUrl(),'_blank')};
+$('#cp').onclick=async()=>{
+  if(!html)return;const b=$('#cp');
+  try{await navigator.clipboard.writeText(html);b.textContent='کپی شد'}
+  catch(e){$('#code').select();b.textContent='انتخاب شد، کپی کن'}
+  setTimeout(()=>{b.textContent='کپی کد'},2000);
+};
+$('#dl').onclick=()=>{if(!html)return;const a=document.createElement('a');a.href=blobUrl();a.download='index.html';document.body.appendChild(a);a.click();a.remove()};
+function gst(t){
+  const e=$('#gst');e.textContent='';
+  t.split(/(https?:\/\/\S+)/).forEach(s=>{if(/^https?:/.test(s)){const a=document.createElement('a');a.href=s;a.textContent=s;a.target='_blank';a.rel='noopener';e.appendChild(a)}else e.append(s)});
+}
+async function gh(path,opt={}){
+  const r=await fetch('https://api.github.com'+path,{...opt,headers:{Authorization:'Bearer '+$('#tok').value.trim(),Accept:'application/vnd.github+json','Content-Type':'application/json'}});
+  let j={};try{j=await r.json()}catch(e){}return {r,j};
+}
+function toB64(s){
+  const bytes=new TextEncoder().encode(s);let bin='';
+  for(let i=0;i<bytes.length;i+=0x8000)bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));
+  return btoa(bin);
+}
+$('#up').onclick=async()=>{
+  if(!html)return gst('اول یه سایت بساز.');
+  const name=$('#repo').value.trim().replace(/[^\w.-]/g,'-');
+  const tk=$('#tok').value.trim();
+  if(!name||!tk)return gst('اسم repo و توکن گیت‌هاب لازمه.');
+  L('tok',tk);$('#up').disabled=true;gst('در حال آپلود...');
+  try{
+    let {r,j}=await gh('/user');if(!r.ok)return gst('توکن گیت‌هاب نامعتبره.');
+    const me=j.login;
+    ({r,j}=await gh('/user/repos',{method:'POST',body:JSON.stringify({name,auto_init:true,private:$('#priv').checked})}));
+    if(!r.ok){
+      const exists=r.status===422&&/already exists/i.test(JSON.stringify(j));
+      if(!exists){const em=j.errors&&j.errors[0]&&j.errors[0].message;return gst('ساخت repo ناموفق بود: '+(j.message||r.status)+(em?' ('+em+')':''))}
+      if(!confirm('repo با این اسم از قبل هست. فایل index.html داخلش جایگزین بشه؟'))return gst('لغو شد.');
+    }
+    ({r,j}=await gh(`/repos/${me}/${name}`));
+    if(!r.ok)return gst('دسترسی به repo ممکن نشد: '+(j.message||r.status));
+    const branch=j.default_branch||'main',b64=toB64(html);
+    let ok=false,why='';
+    for(let i=0;i<5&&!ok;i++){
+      const g=await gh(`/repos/${me}/${name}/contents/index.html?ref=${encodeURIComponent(branch)}`);
+      const sha=g.r.ok&&g.j&&g.j.sha?g.j.sha:undefined;
+      const pu=await gh(`/repos/${me}/${name}/contents/index.html`,{method:'PUT',body:JSON.stringify({message:'Add site',content:b64,branch,sha})});
+      if(pu.r.ok){ok=true;break}
+      why=pu.j.message||pu.r.status;
+      if(![404,409,422].includes(pu.r.status))break;
+      await wait(1500);
+    }
+    if(!ok)return gst('آپلود ناموفق بود: '+why);
+    let msg='آپلود شد: https://github.com/'+me+'/'+name;
+    if($('#pages').checked){
+      const pg=await gh(`/repos/${me}/${name}/pages`,{method:'POST',body:JSON.stringify({source:{branch,path:'/'}})});
+      const userSite=name.toLowerCase()===(me+'.github.io').toLowerCase();
+      msg+=(pg.r.ok||pg.r.status===409)?'\nسایت زنده (چند دقیقه صبر کن): https://'+me+'.github.io/'+(userSite?'':name+'/'):'\nفعال‌سازی Pages ناموفق بود: '+(pg.j.message||pg.r.status);
+    }
+    gst(msg);
+  }catch(e){gst('خطا: '+e.message)}
+  finally{$('#up').disabled=false}
+};
+</script>
+</body>
+</html>
