@@ -11,7 +11,7 @@
 :root{--bg:#010a05;--p:rgba(2,22,12,.74);--c:#00ff84;--l:rgba(0,255,132,.24);--f:#e4fff0;--m:#86c2a2;--r:#ff4d6d;color-scheme:dark;--mono:"JetBrains Mono",ui-monospace,Consolas,monospace}
 *{box-sizing:border-box}
 html{background:var(--bg)}
-body{margin:0;color:var(--f);font:400 16px/1.8 Vazirmatn,system-ui,Tahoma,sans-serif;padding:env(safe-area-inset-top,0) env(safe-area-inset-right,0) 0 env(safe-area-inset-left,0)}
+body{margin:0;color:var(--f);font:400 16px/1.8 Vazirmatn,system-ui,Tahoma,sans-serif;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) 0 env(safe-area-inset-left,0px)}
 #rain{position:fixed;inset:0;width:100%;height:100%;z-index:-2}
 body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(80% 60% at 50% 35%,rgba(1,10,5,.9),rgba(1,10,5,.4) 75%),repeating-linear-gradient(0deg,rgba(0,0,0,.2) 0 1px,transparent 1px 3px)}
 main{max-width:560px;margin:0 auto;padding:12px 14px calc(110px + env(safe-area-inset-bottom,0px))}
@@ -20,6 +20,7 @@ header{display:flex;align-items:center;gap:12px;padding:4px 2px 12px}
 .brand{flex:1;min-width:0;line-height:1.4}
 .brand b{display:block;font:700 21px "Space Grotesk",Vazirmatn,sans-serif;color:var(--c);text-shadow:0 0 12px var(--c)}
 .brand span{font-size:13px;color:var(--m)}
+#bal{flex:none;white-space:nowrap;max-width:44vw;overflow:hidden;text-overflow:ellipsis;direction:rtl}
 .hero{border:1px solid var(--l);border-radius:20px;padding:16px;margin:0 0 12px;background:linear-gradient(120deg,rgba(0,255,132,.14),rgba(2,22,12,.88) 60%);box-shadow:0 0 40px -14px var(--c),inset 0 0 40px rgba(0,255,132,.07)}
 h1{font-size:clamp(26px,8vw,40px);line-height:1.4;margin:0 0 6px;font-weight:900}
 h1 b{display:block;color:var(--c);text-shadow:0 0 18px var(--c);animation:gl 6s steps(1) infinite}
@@ -63,6 +64,8 @@ nav button{border:0;background:none;min-height:54px;font-size:12px;padding:6px 2
 nav button[aria-pressed=true]{color:var(--c);text-shadow:0 0 8px var(--c)}
 nav svg{width:22px;height:22px;display:block;margin:0 auto;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 #stop{position:fixed;inset-inline:14px;bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:6;max-width:532px;margin:0 auto;background:var(--r);color:#fff;border:0;font-weight:700}
+a.lnk,a.go{display:inline-flex;align-items:center;justify-content:center;min-height:44px;border:1px solid var(--l);border-radius:10px;padding:6px 14px;color:var(--c);text-decoration:none;font-size:15px}
+a.go{display:flex;width:100%}
 [hidden]{display:none!important}
 @media(prefers-reduced-motion:reduce){h1 b{animation:none}}
 </style>
@@ -73,6 +76,7 @@ nav svg{width:22px;height:22px;display:block;margin:0 auto;stroke:currentColor;f
 <header>
   <svg class="logo" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 3l18 10.5v21L24 45 6 34.5v-21z" fill="rgba(0,255,132,.1)" stroke="#00ff84" stroke-width="2"/><path d="M24 14l9 16H15z" fill="none" stroke="#00ff84" stroke-width="2"/><circle cx="24" cy="25" r="2.5" fill="#00ff84"/></svg>
   <div class="brand"><b lang="en">AI STUDIO</b><span>ساخت سایت و اپ اندروید با هوش مصنوعی</span></div>
+  <button id="bal" class="mini" type="button" title="بروزرسانی موجودی API">موجودی: —</button>
 </header>
 <section id="v1"></section>
 <section id="v2" class="app" hidden></section>
@@ -86,6 +90,22 @@ nav svg{width:22px;height:22px;display:block;margin:0 auto;stroke:currentColor;f
     <div class="row"><select id="model" dir="ltr" style="flex:1"><option>MiniMaxAI/MiniMax-M2.7</option></select><button id="rf" type="button">بروزرسانی</button></div>
     <p id="ms" class="ms" role="status" aria-live="polite"></p>
   </div>
+  <div class="g">
+    <span class="t">موجودی API</span>
+    <label for="balurl">آدرس موجودی (اختیاری؛ اگه خالی باشه آدرس‌های رایج امتحان می‌شه)</label>
+    <div class="row"><input id="balurl" dir="ltr" placeholder="https://.../credits"><button id="bl" type="button">نمایش موجودی</button></div>
+    <p id="bm" class="ms" role="status" aria-live="polite" dir="auto"></p>
+  </div>
+  <div class="g">
+    <span class="t">ربات ساخت APK (گیت‌هاب)</span>
+    <p class="ms">۱) «ساخت توکن» رو بزن، پایین صفحه‌ی گیت‌هاب Generate token رو بزن و توکن رو کپی کن. ۲) اینجا بچسبون. ۳) «راه‌اندازی خودکار» رو بزن. ریپوی خصوصی و ربات خودکار ساخته می‌شه.</p>
+    <label for="ghtok">GitHub token (دسترسی repo و workflow)</label>
+    <input id="ghtok" type="password" autocomplete="off" dir="ltr" placeholder="ghp_...">
+    <label for="ghrepo">ریپو (خالی بذار تا خودکار ساخته بشه)</label>
+    <input id="ghrepo" dir="ltr" placeholder="username/apk-studio">
+    <div class="row"><a id="ghnew" class="lnk" target="_blank" rel="noopener" href="https://github.com/settings/tokens/new?scopes=repo,workflow&amp;description=AI-Studio">ساخت توکن</a><button id="ghset" type="button">راه‌اندازی خودکار</button></div>
+    <p id="ghm" class="ms" role="status" aria-live="polite" dir="auto"></p>
+  </div>
 </section>
 </main>
 <button id="stop" type="button" hidden>⏹ توقف</button>
@@ -94,6 +114,156 @@ nav svg{width:22px;height:22px;display:block;margin:0 auto;stroke:currentColor;f
   <button data-v="2" type="button" aria-pressed="false"><svg viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>اپ اندروید</button>
   <button data-v="3" type="button" aria-pressed="false"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>تنظیمات</button>
 </div></nav>
+<script type="text/plain" id="wf">
+name: Build APK
+run-name: build ${{ inputs.job }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      job:
+        description: job id
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apk-build
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      JOB: ${{ inputs.job }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Prepare app files
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, re, base64
+          job = os.environ['JOB']
+          assert re.fullmatch(r'[a-z0-9]{4,40}', job), 'bad job id'
+          d = json.load(open('jobs/%s.json' % job, encoding='utf-8'))
+          slug = re.sub('[^a-z]', '', str(d.get('slug', '')).lower())[:12]
+          if len(slug) < 3:
+              slug = 'app'
+          name = ' '.join(str(d.get('name') or 'App').split())[:30]
+          name = name.lstrip('@?').replace("'", '\u2019').replace('"', '\u201d').replace('\\', '') or 'App'
+          name = name.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+          pkg = 'com.studio.' + slug + 'app'
+          os.makedirs('w/assets', exist_ok=True)
+          os.makedirs('w/res/mipmap-xxxhdpi', exist_ok=True)
+          os.makedirs('w/src', exist_ok=True)
+          open('w/assets/index.html', 'w', encoding='utf-8').write(d['html'])
+          open('w/res/mipmap-xxxhdpi/ic_launcher.png', 'wb').write(base64.b64decode(d['icon']))
+          manifest = '''<?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="__PKG__">
+          <uses-permission android:name="android.permission.INTERNET"/>
+          <application android:label="__LABEL__" android:icon="@mipmap/ic_launcher" android:supportsRtl="true" android:allowBackup="false" android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
+          <activity android:name=".MainActivity" android:exported="true" android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout|uiMode" android:windowSoftInputMode="adjustResize">
+          <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
+          </activity>
+          </application>
+          </manifest>'''
+          java = '''package __PKG__;
+          import android.app.Activity;
+          import android.content.Intent;
+          import android.os.Bundle;
+          import android.webkit.WebChromeClient;
+          import android.webkit.WebResourceRequest;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+          public class MainActivity extends Activity {
+            private WebView w;
+            @Override protected void onCreate(Bundle b) {
+              super.onCreate(b);
+              w = new WebView(this);
+              setContentView(w);
+              WebSettings s = w.getSettings();
+              s.setJavaScriptEnabled(true);
+              s.setDomStorageEnabled(true);
+              s.setDatabaseEnabled(true);
+              s.setAllowFileAccess(true);
+              s.setMediaPlaybackRequiresUserGesture(false);
+              w.setWebChromeClient(new WebChromeClient());
+              w.setWebViewClient(new WebViewClient() {
+                @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
+                  String u = r.getUrl().toString();
+                  if (u.startsWith("file:")) return false;
+                  try { startActivity(new Intent(Intent.ACTION_VIEW, r.getUrl())); } catch (Exception e) { }
+                  return true;
+                }
+              });
+              if (b != null) w.restoreState(b); else w.loadUrl("file:///android_asset/index.html");
+            }
+            @Override protected void onSaveInstanceState(Bundle o) {
+              super.onSaveInstanceState(o);
+              w.saveState(o);
+            }
+            @Override public void onBackPressed() {
+              if (w.canGoBack()) w.goBack(); else super.onBackPressed();
+            }
+          }'''
+          open('w/AndroidManifest.xml', 'w', encoding='utf-8').write(manifest.replace('__PKG__', pkg).replace('__LABEL__', name))
+          open('w/src/MainActivity.java', 'w', encoding='utf-8').write(java.replace('__PKG__', pkg))
+          open(os.environ['GITHUB_ENV'], 'a').write('SLUG=%s\n' % slug)
+          PY
+
+      - name: Build and sign
+        run: |
+          set -euo pipefail
+          SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          BT=$(ls -d "$SDK"/build-tools/[0-9]* | sort -V | tail -1)
+          AJ=$(ls -d "$SDK"/platforms/android-[0-9]* | grep -E '/android-[0-9]+$' | sort -V | tail -1)/android.jar
+          echo "build-tools: $BT"
+          echo "android.jar: $AJ"
+          mkdir -p keystore
+          if [ ! -f keystore/release.jks ]; then
+            keytool -genkeypair -keystore keystore/release.jks -alias k -keyalg RSA -keysize 2048 -validity 36500 -storepass android -keypass android -dname "CN=AI Studio"
+          fi
+          KS="$PWD/keystore/release.jks"
+          cd w
+          mkdir -p build classes out
+          "$BT/aapt2" compile --dir res -o build/res.zip
+          "$BT/aapt2" link -o build/base.apk -I "$AJ" --manifest AndroidManifest.xml -A assets \
+            --min-sdk-version 24 --target-sdk-version 34 --version-code 1 --version-name 1.0 build/res.zip
+          javac -source 8 -target 8 -Xlint:-options -cp "$AJ" -d classes src/MainActivity.java
+          "$BT/d8" --release --lib "$AJ" --min-api 24 --output build $(find classes -name '*.class')
+          (cd build && zip -q base.apk classes.dex)
+          "$BT/zipalign" -f -p 4 build/base.apk build/aligned.apk
+          "$BT/apksigner" sign --ks "$KS" --ks-pass pass:android --key-pass pass:android --out "out/$SLUG.apk" build/aligned.apk
+          "$BT/apksigner" verify --verbose "out/$SLUG.apk"
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "apk-$JOB" "w/out/$SLUG.apk" --title "$SLUG" --notes "Built by AI Studio"
+
+      - name: Save signing key and clean up
+        if: always()
+        run: |
+          git config user.name "apk-bot"
+          git config user.email "apk-bot@users.noreply.github.com"
+          git rm -q --ignore-unmatch "jobs/$JOB.json" || true
+          git add keystore || true
+          git commit -q -m "apk $JOB [skip ci]" || true
+          git pull --rebase -q || true
+          git push -q || true
+</script>
 <script>
 const $=s=>document.querySelector(s);
 const L=(k,v)=>{try{return v===undefined?localStorage.getItem(k):localStorage.setItem(k,v)}catch(e){return null}};
@@ -104,23 +274,47 @@ const L=(k,v)=>{try{return v===undefined?localStorage.getItem(k):localStorage.se
   const still=matchMedia('(prefers-reduced-motion: reduce)').matches;
   function size(){const d=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;cv.width=W*d;cv.height=H*d;cx.setTransform(d,0,0,d,0,0);
     const n=Math.ceil(W/S);cols=Array.from({length:n},(_,i)=>cols[i]!==undefined?cols[i]:(Math.random()*H/S|0));cx.fillStyle='#010a05';cx.fillRect(0,0,W,H)}
-  function step(t){raf=requestAnimationFrame(step);if(t-last<55)return;last=t;
+  function draw(){
     cx.fillStyle='rgba(1,10,5,.13)';cx.fillRect(0,0,W,H);cx.font=S+'px monospace';
     for(let i=0;i<cols.length;i++){const y=cols[i]*S;cx.fillStyle=Math.random()<.05?'#d8ffe9':'#00ff84';cx.fillText(G[Math.random()*G.length|0],i*S,y);cols[i]=(y>H&&Math.random()>.975)?0:cols[i]+1}}
-  size();addEventListener('resize',size);
-  if(still){for(let k=0;k<50;k++)step(k*100);cancelAnimationFrame(raf);return}
+  function step(t){raf=requestAnimationFrame(step);if(t-last<55)return;last=t;draw()}
+  function still1(){for(let k=0;k<50;k++)draw()}
+  size();
+  if(still){still1();addEventListener('resize',()=>{size();still1()});return}
+  addEventListener('resize',size);
   raf=requestAnimationFrame(step);
   document.addEventListener('visibilitychange',()=>{cancelAnimationFrame(raf);if(!document.hidden)raf=requestAnimationFrame(step)});
 })();
 /* پرامپت‌ها */
-const RULES=`OUTPUT: exactly ONE complete \`\`\`html code block, then one short summary line in the user's language. Think briefly, then write. Keep the file under about 24 KB (CSS under 200 lines, JS under 100 lines). Finish with </html>.
-DESIGN: commit to a distinctive aesthetic (not Inter/Roboto/Arial, not purple-on-white). CSS variables, layered gradients, inline SVG, glow, glass panels. One strong hero, CSS/SVG/emoji only, no external images. CSS-only motion finished within 2s, respect prefers-reduced-motion. Real specific copy in the user's language; every person, brand and place INVENTED.
-PERSIAN (when request is Persian): html lang="fa" dir="rtl"; fonts only Vazirmatn, Lalezar, Markazi Text, Noto Naskh Arabic, Noto Sans Arabic, Amiri; a Persian font in EVERY font-family list; no letter-spacing or italics on Persian text; body line-height 1.9, font-size at least 16px; logical CSS properties.
-LAYOUT (360px width): *{box-sizing:border-box}; img,svg,video{max-width:100%}; no fixed widths over 100%; flex-wrap, min-width:0, overflow-wrap:anywhere; no overlapping text; no overflow-x:hidden hacks; touch targets at least 44px; fixed bars must not cover content; content visible without JavaScript.
-CODE: starts with <!DOCTYPE html>, ends with </html>. Only external resource is one Google Fonts link. Unique ids; every href is an existing #id (never "#"); buttons are type="button". Plain ES2017 in ONE script tag at the end of body, ASCII quotes, no alert/confirm/prompt, null-check elements, localStorage in try/catch. No TODO, no lorem ipsum. Do not add unrequested features.`;
-const SYS_S='You are a senior front-end engineer and designer. Turn a short request into ONE finished, memorable, bug-free website (single index.html, inline CSS and JS).\n'+RULES;
-const SYS_A='You are a senior mobile app designer-engineer. Turn a short request into ONE finished Android-style app UI as a single index.html that behaves like a native app when added to the home screen: full-height app shell (100dvh), top app bar, bottom tab bar with 2-4 screens switched by JavaScript, working interactions (lists, forms, counters, timers or whatever the request needs) with state kept in memory and optional localStorage, Material-like touch feedback, safe-area padding (env(safe-area-inset-*)), viewport-fit=cover, theme-color meta. Mobile only, no desktop layout. WEBVIEW: the file is packaged into an Android WebView app loaded from file:///android_asset/index.html and must work offline: relative paths only, no service worker, no ES modules, no fetch of local files, no file download, print or camera features, data only in localStorage (try/catch), opaque backgrounds, system-font fallbacks. Screens must be visible without a click for the first tab.\n'+RULES;
-const BRIEF='You are an art director. Given a request and an aesthetic direction, reply with a SHORT design brief (max 110 words, same language as the request): audience, direction, 4 named hex colors, display + body font (Persian: only Vazirmatn, Lalezar, Markazi Text, Noto Naskh Arabic or Amiri), hero idea, sections or screens, one signature motion. Invent all names. No code.';
+const RULES=`<output_format>
+Exactly ONE complete \`\`\`html code block, then one short summary line in the user's language. Think briefly (plan in at most 8 lines), then write the code. Keep the file under about 24 KB (CSS under 200 lines, JS under 100 lines). Finish with </html>.
+</output_format>
+<design_thinking>
+Before coding decide: purpose and audience; one bold aesthetic direction; the ONE memorable signature detail; a palette with a dominant color and one sharp accent; a display + body font pairing; the background atmosphere. Commit fully: a bold, cohesive vision beats a timid one. Match code complexity to the vision (maximalist needs richer CSS, minimal needs precision and restraint).
+</design_thinking>
+<aesthetics>
+- Typography: a distinctive display font paired with a refined body font; strong size contrast (hero at least 3x body); never Inter, Roboto, Arial or bare system fonts.
+- Color: CSS variables for every color; a dominant color with a sharp accent, not an evenly spread palette; text contrast at least 4.5:1; never a purple gradient on white.
+- Backgrounds: build atmosphere and depth with layered gradients, SVG patterns or an inline SVG noise filter; never one flat color.
+- Motion: CSS only; one orchestrated entrance with staggered animation-delay finished within 2s, plus clear hover, focus and active states; respect prefers-reduced-motion.
+- Layout: one strong hero, a deliberate spacing rhythm, an asymmetric or grid-breaking element; avoid the template of a centered hero plus three identical cards; icons as inline SVG, not rows of emoji.
+- Content: real, specific copy in the user's language; every person, brand and place INVENTED; no external images (CSS, SVG and emoji accents only).
+</aesthetics>
+<persian>
+When the request is Persian: html lang="fa" dir="rtl"; fonts only Vazirmatn, Lalezar, Markazi Text, Noto Naskh Arabic, Noto Sans Arabic, Amiri, with a Persian font in EVERY font-family list; no letter-spacing or italics on Persian text; body line-height 1.9 and font-size at least 16px; logical CSS properties (margin-inline, padding-inline, inset-inline); Persian digits in visible numbers.
+</persian>
+<layout>
+Design for 360px width first. *{box-sizing:border-box}; img,svg,video{max-width:100%}; no fixed widths over 100%; flex-wrap, min-width:0, overflow-wrap:anywhere; no overlapping text; no overflow-x:hidden hacks; touch targets at least 44px; inputs font-size at least 16px; fixed bars must not cover content (pad the body); full-height areas use min-height:100vh then min-height:100dvh; content visible without JavaScript.
+</layout>
+<code_quality>
+Starts with <!DOCTYPE html>, ends with </html>. Include a <title>. Only external resource is ONE Google Fonts link. Unique ids; every href is an existing #id (never "#"); buttons are type="button". Semantic landmarks (header, main, nav, footer) and visible :focus-visible styles. Plain ES2017 in ONE script tag at the end of body, ASCII quotes, no alert/confirm/prompt, no inline on* attributes (use addEventListener), null-check elements, localStorage only inside try/catch. Every control you render must work. No TODO, no lorem ipsum, no unrequested features.
+</code_quality>
+<self_review>
+Before answering, silently verify: every id used in JS exists in the HTML; every button and form has a working handler; CSS braces balance; nothing overflows at 360px; contrast is readable; the file ends with </html>. Fix anything wrong, then output only the final file.
+</self_review>`;
+const SYS_S='You are a senior front-end engineer and award-winning designer. Turn a short request into ONE finished, memorable, bug-free website (single index.html, inline CSS and JS). It must feel hand-designed for this specific subject, never templated. When editing an existing file, change only what was asked and keep everything else intact.\n'+RULES;
+const SYS_A='You are a senior mobile app designer-engineer. Turn a short request into ONE finished Android-style app UI as a single index.html that behaves like a native app when added to the home screen: full-height app shell (100dvh), top app bar, bottom tab bar with 2-4 screens switched by JavaScript, working interactions (lists, forms, counters, timers or whatever the request needs) with state kept in memory and optional localStorage, Material-like touch feedback, safe-area padding (env(safe-area-inset-*)), viewport-fit=cover, theme-color meta. Mobile only, no desktop layout. WEBVIEW: the file is packaged into an Android WebView app loaded from file:///android_asset/index.html and must work offline: relative paths only, no service worker, no ES modules, no fetch of local files, no file download, print or camera features, data only in localStorage (try/catch), opaque backgrounds, system-font fallbacks. Screens must be visible without a click for the first tab. Give it a distinctive visual identity (not default Material blue), seed the first screen with realistic invented sample data so it never looks empty. When editing an existing file, change only what was asked and keep everything else intact.\n'+RULES;
+const BRIEF='You are an art director. Given a request and an aesthetic direction, reply with a SHORT design brief (max 120 words, same language as the request): audience and purpose; direction; ONE memorable signature detail; palette as 4 named hex colors (dominant, sharp accent, surface, text with contrast of at least 4.5:1 on the surface); display + body font (Persian: only Vazirmatn, Lalezar, Markazi Text, Noto Naskh Arabic, Noto Sans Arabic or Amiri); background atmosphere; hero idea; sections or screens; one orchestrated entrance motion. Avoid generic choices (centered hero with three identical cards, purple gradient on white, Inter/Roboto). Invent all names. No code.';
 const ENH='You rewrite a short website or app request into a richer, specific, buildable request (max 90 words, same language, no markdown, no code): subject, audience, key sections or screens, features, mood. Do not add real brands or people. Reply with the rewritten request only.';
 const DIRS=[['auto','خودکار'],['neon cyber-noir with glowing neon accents and glass panels','سایبر نئون'],['editorial magazine: huge type, tight grid, rules','مجله‌ای'],['neo-brutalist: thick borders, flat bold colors, hard shadows','برالیست'],['retro-futuristic: CRT glow, mono type, scanlines','رترو فیوچر'],['luxury minimal: whitespace, refined type, one metallic accent','مینیمال لوکس'],['playful gaming: bold shapes, vivid gradients','گیمینگ']];
 const EX={s:[['ویدیو','یه سایت برای ویدیو بساز: گالری ویدیو، پلیر خفن و لیست پخش'],['فیلم','یه صفحه معرفی برای یه فیلم خیالی با طراحی سینمایی بساز'],['شخصی','یه سایت شخصی برای یه برنامه‌نویس با پروژه‌ها و تماس بساز']],
@@ -130,15 +324,16 @@ const sel=$('#model'),prof=()=>PRO.find(x=>x.re.test(sel.value))||{t:1,p:.95};
 const S={s:{html:'',vers:[],errs:[]},a:{html:'',vers:[],errs:[]}};
 let running=false,stopped=false,curAc=null,dir=DIRS[0][0],lastCut=false,mode='s';
 const base=()=>$('#base').value.trim().replace(/\/+$/,'');
-/* ساخت دو بخش مستقل */
+/* ساخت دو بخش مستقل (شناسه‌های APK جدا از دکمه «اعمال» هستند) */
 const APKBOX=`<div class="g" id="apkbox" hidden><span class="t">ساخت APK</span>
-  <div class="row"><canvas id="ic" width="192" height="192" style="width:76px;height:76px;border-radius:18px" aria-label="آیکون"></canvas><div style="flex:1;min-width:150px"><label for="apn" style="margin:0 0 4px">اسم اپ</label><input id="apn" maxlength="30"></div></div>
-  <div class="row"><button id="aps" class="go" type="button" style="margin:0">۱ دانلود build-apk.sh</button></div>
-  <div class="row"><button id="apt" type="button">۲ کپی دستور ترموکس</button><button id="api" type="button">دانلود آیکون</button><button id="apr" type="button">آیکون جدید</button></div>
-  <p class="ms" id="apm"></p></div>`;
+  <div class="row"><canvas id="ic" width="192" height="192" style="width:76px;height:76px;border-radius:18px" aria-label="آیکون"></canvas><div style="flex:1;min-width:150px"><label for="apkname" style="margin:0 0 4px">اسم اپ</label><input id="apkname" maxlength="30"></div></div>
+  <div class="row"><button id="apkbuild" class="go" type="button" style="margin:0">ساخت APK با ربات گیت‌هاب</button></div>
+  <div class="row"><button id="apkdl" class="go" type="button" style="margin:0" hidden>⬇ دانلود APK</button></div>
+  <div class="row"><a id="apkgh" class="lnk" target="_blank" rel="noopener" hidden>صفحه‌ی APK در گیت‌هاب</a><button id="apkic" type="button">دانلود آیکون</button><button id="apknew" type="button">آیکون جدید</button></div>
+  <p class="ms" id="apkmsg" dir="auto" role="status" aria-live="polite"></p></div>`;
 function panel(m){
   const a=m==='a';
-  return `<div class="hero"><div><h1>${a?'اپ اندروید':'هر سایتی که بخوای،'}<b>${a?'با یک جمله.':'با یک جمله.'}</b></h1><p class="sub">${a?'اپ موبایلی با نوار پایین و چند صفحه می‌سازه؛ در کروم «افزودن به صفحه اصلی» رو بزن تا مثل اپ نصب بشه.':'بنویس چی می‌خوای. اول طرح می‌کشه، بعد کد می‌نویسه و خودش چکش می‌کنه.'}</p></div></div>
+  return `<div class="hero"><div><h1>${a?'اپ اندروید':'هر سایتی که بخوای،'}<b>با یک جمله.</b></h1><p class="sub">${a?'اپ موبایلی با نوار پایین و چند صفحه می‌سازه؛ در کروم «افزودن به صفحه اصلی» رو بزن تا مثل اپ نصب بشه.':'بنویس چی می‌خوای. اول طرح می‌کشه، بعد کد می‌نویسه و خودش چکش می‌کنه.'}</p></div></div>
   ${a?'<ol class="steps"><li>۱ توضیح</li><li>۲ ساخت</li><li>۳ پیش‌نمایش</li><li>۴ نصب</li></ol>':''}
   <div class="g">
     ${a?'':'<span class="t">حال‌وهوای طراحی</span><div class="chips" id="dirs"></div>'}
@@ -160,26 +355,77 @@ function panel(m){
   <div class="row"><button id="up${m}" type="button">ارتقای طراحی</button><button id="un${m}" type="button">نسخه قبلی</button></div></div>`;
 }
 $('#v1').innerHTML=panel('s');$('#v2').innerHTML=panel('a');
-$('#key').value=L('key')||'';if(L('base'))$('#base').value=L('base');
-['key','base'].forEach(k=>['change','input'].forEach(ev=>$('#'+k).addEventListener(ev,()=>L(k,$('#'+k).value))));
+$('#key').value=L('key')||'';if(L('base'))$('#base').value=L('base');if(L('balurl'))$('#balurl').value=L('balurl');$('#ghtok').value=L('ghtok')||'';$('#ghrepo').value=L('ghrepo')||'';
+['key','base','balurl','ghtok','ghrepo'].forEach(k=>['change','input'].forEach(ev=>$('#'+k).addEventListener(ev,()=>L(k,$('#'+k).value))));
 sel.addEventListener('change',()=>L('model',sel.value));
 const log=(m,t,bad,clr)=>{const e=$('#lg'+m);if(clr)e.textContent='';if(!t)return;const d=document.createElement('div');if(bad)d.className='e';d.textContent=t;e.appendChild(d);e.scrollTop=e.scrollHeight};
-const IDS=['gos','goa','fixs','fixa','aps','apa','ups','upa','uns','una','ens','ena','rf'];
+const IDS=['gos','goa','fixs','fixa','aps','apa','ups','upa','uns','una','ens','ena','rf','apkbuild'];
 const busy=b=>{IDS.forEach(i=>{const e=$('#'+i);if(e)e.disabled=b});$('#stop').hidden=!b};
 DIRS.forEach(([v,n],i)=>{const b=document.createElement('button');b.type='button';b.textContent=n;b.setAttribute('aria-pressed',String(i===0));
   b.onclick=()=>{dir=v;$('#dirs').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)))};$('#dirs').appendChild(b)});
 ['s','a'].forEach(m=>EX[m].forEach(([n,t])=>{const b=document.createElement('button');b.type='button';b.textContent=n;b.onclick=()=>{$('#q'+m).value=t};$('#ex'+m).appendChild(b)}));
+/* موجودی API */
+const bal=$('#bal');
+const NUMK=/balance|available|remaining|credit|quota|usage|used|total|limit|usd|amount|cost/i;
+function nums(o,out,d){
+  if(o==null||typeof o!=='object'||d>4||out.length>=6)return out;
+  for(const k of Object.keys(o)){
+    const v=o[k];
+    if((typeof v==='number'||(typeof v==='string'&&v.trim()!==''&&isFinite(v)))&&NUMK.test(k)){if(out.length<6)out.push([k,Number(v)])}
+    else if(v&&typeof v==='object')nums(v,out,d+1);
+  }
+  return out;
+}
+const fmt=v=>v.toLocaleString('en-US',{maximumFractionDigits:4});
+const bm=(t,c)=>{const e=$('#bm');e.textContent=t;e.style.color=c||''};
+let balBusy=false;
+async function refreshBal(loud){
+  const kk=$('#key').value.trim();
+  if(!kk||/[^\x20-\x7E]/.test(kk)){bal.textContent='موجودی: —';if(loud)bm('اول API key رو (فقط حروف انگلیسی و عدد) وارد کن.','var(--r)');return}
+  if(balBusy)return;
+  let b,o;
+  try{b=base();o=new URL(b).origin}catch(e){bal.textContent='موجودی: —';if(loud)bm('Base URL معتبر نیست.','var(--r)');return}
+  balBusy=true;bal.disabled=true;$('#bl').disabled=true;if(loud)bm('دارم موجودی رو می‌گیرم...');
+  const cu=$('#balurl').value.trim(),sv=L('balok');
+  const list=cu?[cu]:[...new Set([sv,b+'/credits',b+'/credits/balance',b+'/balance',b+'/user/balance',b+'/account/balance',b+'/dashboard/billing/credit_grants',b+'/dashboard/billing/subscription',b+'/key/info',b+'/user/info',o+'/credits',o+'/api/user/self'].filter(Boolean))];
+  let found=null,lastErr='';
+  try{
+    for(const u of list){
+      const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),8000);
+      try{
+        const r=await fetch(u,{signal:ac.signal,headers:{Authorization:'Bearer '+kk}});
+        if(!r.ok){lastErr='HTTP '+r.status;continue}
+        const j=await r.json();const n=nums(j,[],0);
+        if(n.length){found={u:u,n:n};if(!cu)L('balok',u);break}
+        lastErr='پاسخ عدد موجودی نداشت';
+      }catch(e){lastErr=e.name==='AbortError'?'timeout':(e.name==='TypeError'?'اتصال/CORS':e.message)}
+      finally{clearTimeout(tm)}
+    }
+  }finally{balBusy=false;bal.disabled=false;$('#bl').disabled=false}
+  if(found){
+    const p=found.n.find(x=>/balance|available|remaining/i.test(x[0]))||found.n[0];
+    bal.textContent='موجودی: '+fmt(p[1]);bal.title=p[0];
+    bm(found.n.map(x=>x[0]+': '+fmt(x[1])).join('  ·  ')+'\n'+found.u,'var(--c)');
+  }else{
+    bal.textContent='موجودی: ؟';
+    if(loud)bm('موجودی پیدا نشد ('+lastErr+'). آدرس دقیق موجودی سرویس رو در کادر بالا وارد کن؛ ممکنه سرور CORS رو هم نبسته باشه.','var(--r)');
+  }
+}
+bal.onclick=()=>{refreshBal(true)};
+$('#bl').onclick=()=>{refreshBal(true)};
 /* مدل‌ها */
 const ms=(t,c)=>{const e=$('#ms');e.textContent=t;e.style.color=c||''};
 async function models(){
   const b=$('#rf');b.disabled=true;ms('دارم وصل می‌شم...');
   try{
-    const r=await fetch(base()+'/models');if(!r.ok)throw new Error('HTTP '+r.status);
+    const kk=$('#key').value.trim(),hd={};if(kk&&!/[^\x20-\x7E]/.test(kk))hd.Authorization='Bearer '+kk;
+    const r=await fetch(base()+'/models',{headers:hd});if(!r.ok)throw new Error('HTTP '+r.status);
     const j=await r.json();if(!j||!Array.isArray(j.data)||!j.data.length)throw new Error('لیست مدل خالی بود');
     const keep=L('model')||sel.value;sel.innerHTML='';j.data.forEach(x=>sel.add(new Option(x.id,x.id)));
     const d=[...sel.options].find(o=>/MiniMax-M2\.7$/.test(o.value));
     if(keep&&[...sel.options].some(o=>o.value===keep))sel.value=keep;else if(d)sel.value=d.value;
     ms('✅ متصل · '+j.data.length+' مدل','var(--c)');
+    refreshBal(false);
   }catch(e){
     const sv=L('model');if(sv){if(![...sel.options].some(o=>o.value===sv))sel.add(new Option(sv,sv));sel.value=sv}
     ms('❌ اتصال ناموفق ('+e.message+'). اینترنت/VPN یا Base URL رو چک کن؛ ممکنه CORS سرور هم مانع باشه.','var(--r)');
@@ -214,7 +460,7 @@ async function ask(msgs,max,label,m){
         throw new Error(r.status+' - '+(r.status===401?'کلید نامعتبر است':r.status===402?'توکن‌ها تمام شده':x.slice(0,160)));
       }
       log(m,label+' شروع شد...');
-      const rd=r.body.getReader(),dec=new TextDecoder();let buf='',out='',n=0,fin='';
+      const rd=r.body.getReader(),dec=new TextDecoder();let buf='',out='',n=0,fin='',raw='';
       const handle=ln=>{
         const l=ln.trim();if(!l.startsWith('data:'))return;
         const d=l.slice(5).trim();if(!d||d==='[DONE]')return;
@@ -225,9 +471,18 @@ async function ask(msgs,max,label,m){
         const dl=ch.delta||{};if(dl.content)out+=dl.content;
         if(++n%25===0){const lc=$('#lg'+m).lastChild;if(lc)lc.textContent=label+' '+out.length+' نویسه'}
       };
-      try{for(;;){const {done,value}=await rd.read();if(done)break;last=Date.now();buf+=dec.decode(value,{stream:true});const ls=buf.split('\n');buf=ls.pop();ls.forEach(handle)}}
+      try{for(;;){const {done,value}=await rd.read();if(done)break;last=Date.now();const ck=dec.decode(value,{stream:true});if(raw.length<400000)raw+=ck;buf+=ck;const ls=buf.split('\n');buf=ls.pop();ls.forEach(handle)}}
       catch(re){if(re.name!=='TypeError'||out.length<300)throw re;lastCut=true;log(m,'اتصال وسط پاسخ قطع شد؛ ادامه می‌گیرم.',1)}
       buf+=dec.decode();if(buf.trim())handle(buf);
+      if(!out&&raw.trim().charAt(0)==='{'){
+        /* سرور استریم نکرده و یک JSON معمولی برگردانده */
+        try{
+          const jj=JSON.parse(raw);
+          if(jj.error)throw new Error(typeof jj.error==='string'?jj.error:(jj.error.message||'خطای سرور'));
+          const c0=jj.choices&&jj.choices[0];out=(c0&&((c0.message&&c0.message.content)||c0.text))||'';
+          if(c0&&c0.finish_reason==='length')lastCut=true;
+        }catch(pe){if(pe instanceof SyntaxError){}else throw pe}
+      }
       return out;
     }catch(e){
       if(e.name==='AbortError'&&stopped)throw new Error('متوقف شد');
@@ -255,9 +510,9 @@ function autofix(h){
     if(hm){let n=hm[0];if(!/\bdir\s*=/i.test(n))n=n.replace(/<html/i,'<html dir="rtl"');if(!/\blang\s*=/i.test(n))n=n.replace(/<html/i,'<html lang="fa"');if(n!==hm[0])h=h.replace(hm[0],()=>n)}
   }
   if(/\bhref\s*=\s*["']#["']/i.test(h)){
-    const bm=h.match(/<body(\s[^>]*)?>/i);
-    if(bm){let id=(bm[0].match(/\bid\s*=\s*["']([^"']+)["']/)||[])[1];
-      if(!id){id='page-top';const nb=bm[0].replace(/<body/i,'<body id="page-top"');h=h.replace(bm[0],()=>nb)}
+    const bm2=h.match(/<body(\s[^>]*)?>/i);
+    if(bm2){let id=(bm2[0].match(/\bid\s*=\s*["']([^"']+)["']/)||[])[1];
+      if(!id){id='page-top';const nb=bm2[0].replace(/<body/i,'<body id="page-top"');h=h.replace(bm2[0],()=>nb)}
       h=h.replace(/(\bhref\s*=\s*)["']#["']/gi,(x,a)=>a+'"#'+id+'"')}
   }
   h=h.replace(/\s(?:src|href)\s*=\s*(["'])\s*\1/gi,'');
@@ -271,6 +526,8 @@ function check(h){
   if(!/^<!DOCTYPE html/i.test(h))p.push('must start with <!DOCTYPE html>');
   if(!/<\/html>\s*$/i.test(h))p.push('file is incomplete: it must end with </html>');
   if(h.length<2500)p.push('design is too minimal: make it richer');
+  if(!/<title>[^<]+<\/title>/i.test(h))p.push('add a <title>');
+  if((h.match(/<link[^>]+rel\s*=\s*["']stylesheet["']/gi)||[]).length>1)p.push('use only ONE Google Fonts <link>, merge families into one URL');
   if(/lorem ipsum|(\/\/|<!-{2}|\/\*)\s*(TODO|\.\.\.)/i.test(h))p.push('remove placeholders');
   if((h.match(/<script[\s>]/gi)||[]).length!==(h.match(/<\/script>/gi)||[]).length)p.push('unclosed <script> tag');
   if((css.match(/\{/g)||[]).length!==(css.match(/\}/g)||[]).length)p.push('CSS braces are not balanced');
@@ -314,17 +571,25 @@ function show(m,h,keep){
   const s=S[m];s.html=h;s.errs=[];$('#eb'+m).hidden=true;$('#cd'+m).value=h;
   if(!keep){s.vers.push(h);if(s.vers.length>15)s.vers.shift()}
   $('#fr'+m).srcdoc=withHook(h);
+  if(!keep){s.watch=true;s.until=Date.now()+60000}
+}
+function maybeAuto(m){
+  const s=S[m];
+  if(running||stopped||!s.html||!s.watch||Date.now()>s.until||!s.errs.length||(s.auto||0)>=1||!$('#key').value.trim())return;
+  log(m,'خطای اجرا پیدا شد؛ یک بار خودکار اصلاحش می‌کنم...',1);
+  gen(m,'The page has JavaScript errors: '+s.errs.slice(0,3).join(' | ')+'. Fix them and return the full file in one ```html block.',false,true);
 }
 addEventListener('message',e=>{
   ['s','a'].forEach(m=>{
     if(e.source!==$('#fr'+m).contentWindow||!e.data||!e.data.err)return;
     const s=S[m];if(s.errs.length<20)s.errs.push(e.data.err);
-    $('#et'+m).textContent='خطای جاوااسکریپت: '+s.errs.slice(0,3).join(' | ');$('#eb'+m).hidden=false;
+    $('#et'+m).textContent='خطای جاوااسکریپت: '+s.errs.slice(0,3).join(' | ');$('#eb'+m).hidden=false;setTimeout(()=>maybeAuto(m),2500);
   });
 });
 /* ساخت */
-async function gen(m,text,fresh){
+async function gen(m,text,fresh,isAuto){
   if(running)return;running=true;stopped=false;busy(true);log(m,'',0,1);
+  let done=false;S[m].watch=false;S[m].auto=isAuto?(S[m].auto||0)+1:0;
   try{
     const SYS=m==='a'?SYS_A:SYS_S;let u;
     if(fresh){
@@ -350,21 +615,25 @@ async function gen(m,text,fresh){
       if(h&&best&&h.length<best.length*.5){log(m,'پاسخ خیلی کوتاه بود؛ دوباره می‌پرسم.',1);continue}
       if(h)best=h;
       const p=h?check(h):['reply with one complete ```html block'];
-      if(!p.length){show(m,h);if(m==='a'&&fresh)await mkMeta(m,text);log(m,'✓ همه چک‌ها (نحو، ساختار، فونت، لینک‌ها) قبول شد. آماده‌ست.');return}
+      if(!p.length){show(m,h);done=true;if(m==='a'&&fresh)await mkMeta(m,text);log(m,'✓ همه چک‌ها (نحو، ساختار، فونت، لینک‌ها) قبول شد. آماده‌ست.');return}
       if(i<2){
         log(m,'ایراد پیدا شد، اصلاح می‌کنم ('+(i+1)+'/2): '+p.join('، '),1);
         const last=msgs[msgs.length-1];
         if(cut||!h)msgs=[...msgs.slice(0,-1),{role:'user',content:last.content+'\n\nYour previous answer was cut off or invalid ('+p.join('; ')+'). Write a more compact but complete version under 14 KB. Return the full file in one ```html block.'}];
         else msgs=[...msgs,{role:'assistant',content:'```html\n'+h+'\n```'},{role:'user',content:'Problems found: '+p.join('; ')+'. Fix them and return the full corrected file in one ```html block.'}];
       }else{
-        if(best&&/<\/html>\s*$/i.test(best)){show(m,best);log(m,'این ایرادها مونده: '+p.join('، ')+'. «ارتقای طراحی» یا «تغییر بده» رو امتحان کن.',1)}
-        else log(m,'خروجی کامل نشد؛ درخواست رو کوتاه‌تر بنویس. ('+p.join('، ')+')',1);
+        if(best&&/<\/html>\s*$/i.test(best)){show(m,best);done=true;if(m==='a'&&fresh)await mkMeta(m,text);log(m,'این ایرادها مونده: '+p.join('، ')+'. «ارتقای طراحی» یا «تغییر بده» رو امتحان کن.',1)}
+        else{done=true;log(m,'خروجی کامل نشد؛ درخواست رو کوتاه‌تر بنویس. ('+p.join('، ')+')',1)}
       }
+    }
+    if(!done){
+      if(best&&/<\/html>\s*$/i.test(best)){show(m,best);if(m==='a'&&fresh)await mkMeta(m,text);log(m,'بهترین نسخه نمایش داده شد؛ ممکنه هنوز ایراد داشته باشه.',1)}
+      else log(m,'خروجی کامل نشد؛ دوباره امتحان کن یا درخواست رو کوتاه‌تر بنویس.',1);
     }
   }catch(e){
     if(stopped){log(m,'⏹ متوقف شد. نسخه قبلی سر جاشه.');return}
     log(m,'خطا: '+(e.name==='TypeError'?'اتصال برقرار نشد (اینترنت، VPN یا CORS).':e.message),1);
-  }finally{busy(false);running=false;curAc=null}
+  }finally{busy(false);running=false;curAc=null;setTimeout(()=>{refreshBal(false)},1500);setTimeout(()=>{maybeAuto(m)},2500)}
 }
 $('#stop').onclick=()=>{stopped=true;if(curAc)curAc.abort();log(mode,'⏹ دارم متوقف می‌کنم...')};
 const need=m=>{if(!$('#key').value.trim()){go(3);ms('API key رو وارد کن.','var(--r)');return false}L('model',sel.value);return true};
@@ -384,10 +653,10 @@ async function enhance(m){
   const kind=m==='a'?'app':'site';
   $('#en'+m).onclick=()=>enhance(m);
   $('#go'+m).onclick=()=>{const q=$('#q'+m).value.trim();if(!q)return log(m,'اول بنویس چی می‌خوای.',1,1);if(need(m))gen(m,q,true)};
-  const apply=()=>{const q=$('#ch'+m).value.trim();if(!S[m].html)return log(m,'اول یه '+(m==='a'?'اپ':'سایت')+' بساز.',1,1);if(!q||running)return;if(need(m)){gen(m,'Change the current '+kind+' as follows and return the FULL updated file in one ```html block: '+q,false);$('#ch'+m).value=''}};
+  const apply=()=>{const q=$('#ch'+m).value.trim();if(!S[m].html)return log(m,'اول یه '+(m==='a'?'اپ':'سایت')+' بساز.',1,1);if(!q||running)return;if(need(m)){gen(m,'Change the current '+kind+' as follows and return the FULL updated file in one ```html block. Keep everything else exactly as it is: '+q,false);$('#ch'+m).value=''}};
   $('#ap'+m).onclick=apply;
   $('#ch'+m).addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing){e.preventDefault();apply()}});
-  $('#up'+m).onclick=()=>{if(!S[m].html)return log(m,'اول یه '+(m==='a'?'اپ':'سایت')+' بساز.',1,1);if(need(m))gen(m,'Critique the current design like a ruthless art director (hierarchy, color, hero impact, spacing, motion, generic parts), then fix everything you found. Keep content and features. Return the FULL updated file in one ```html block.',false)};
+  $('#up'+m).onclick=()=>{if(!S[m].html)return log(m,'اول یه '+(m==='a'?'اپ':'سایت')+' بساز.',1,1);if(need(m))gen(m,'Critique the current design like a ruthless art director (type pairing and scale, dominant color plus sharp accent, background atmosphere, hero impact, spacing rhythm, orchestrated motion, generic template parts, contrast, 360px layout), pick the 5 highest-impact weaknesses, then fix them without breaking anything. Keep content and features. Return the FULL updated file in one ```html block.',false)};
   $('#fix'+m).onclick=()=>{const s=S[m];if(!s.html||!s.errs.length)return;if(need(m))gen(m,'The page has JavaScript errors: '+s.errs.slice(0,3).join(' | ')+'. Fix them and return the full file in one ```html block.',false)};
   $('#un'+m).onclick=()=>{if(running)return;const s=S[m];if(s.vers.length<2)return log(m,'نسخه قبلی وجود نداره.',1,1);s.vers.pop();show(m,s.vers[s.vers.length-1],true);log(m,'به نسخه قبلی برگشتی.',0,1)};
   const tab=n=>{$('#pv'+m).hidden=n!==1;$('#cv'+m).hidden=n!==2;$('#t1'+m).setAttribute('aria-pressed',String(n===1));$('#t2'+m).setAttribute('aria-pressed',String(n===2))};
@@ -409,7 +678,7 @@ async function mkMeta(m,req){
   let slug=String(o.slug||'').toLowerCase().replace(/[^a-z]/g,'').slice(0,12);if(slug.length<3)slug='app'+Date.now().toString(36).replace(/[^a-z]/g,'x');
   const em=String(o.emoji||'📱'),seg=(typeof Intl!=='undefined'&&Intl.Segmenter)?[...new Intl.Segmenter().segment(em)][0].segment:Array.from(em)[0];
   S.a.meta={name:String(o.name||tt||'App').trim().slice(0,30),slug:slug,c1:hx.test(o.c1)?o.c1:'#0b6b4f',c2:hx.test(o.c2)?o.c2:'#2de2ff',emoji:seg||'📱'};
-  $('#apn').value=S.a.meta.name;drawIcon();$('#apkbox').hidden=false;
+  $('#apkname').value=S.a.meta.name;drawIcon();$('#apkbox').hidden=false;
   log(m,'اسم اپ: '+S.a.meta.name+' | پایین صفحه بخش «ساخت APK» آماده است.');
 }
 function drawIcon(){
@@ -418,49 +687,114 @@ function drawIcon(){
   x.fillStyle=g;x.beginPath();if(x.roundRect)x.roundRect(0,0,192,192,44);else x.rect(0,0,192,192);x.fill();
   x.font='104px "Noto Color Emoji","Apple Color Emoji","Segoe UI Emoji",sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillStyle='#fff';x.fillText(mt.emoji,96,106);
 }
-function mkScript(){
-  const mt=S.a.meta,h=S.a.html;if(!mt||!h)return '';
-  const nm=($('#apn').value.trim()||mt.name).slice(0,30),pkg='com.studio.'+mt.slug,E='APKSTUDIO_EOF';
-  const png=$('#ic').toDataURL('image/png').split(',')[1];
-  const man='<?xml version="1.0" encoding="utf-8"?>\n<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="'+pkg+'" android:versionCode="1" android:versionName="1.0">\n<uses-sdk android:minSdkVersion="24" android:targetSdkVersion="28"/>\n<uses-permission android:name="android.permission.INTERNET"/>\n<application android:label="'+xe(nm)+'" android:icon="@mipmap/ic_launcher" android:supportsRtl="true" android:theme="@android:style/Theme.DeviceDefault.NoActionBar">\n<activity android:name=".MainActivity" android:exported="true" android:configChanges="orientation|screenSize|keyboardHidden">\n<intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>\n</activity>\n</application>\n</manifest>';
-  const jv='package '+pkg+';\nimport android.app.Activity;\nimport android.os.Bundle;\nimport android.webkit.WebSettings;\nimport android.webkit.WebView;\nimport android.webkit.WebViewClient;\nimport android.webkit.WebChromeClient;\npublic class MainActivity extends Activity {\n  private WebView w;\n  @Override protected void onCreate(Bundle b) {\n    super.onCreate(b);\n    w = new WebView(this);\n    setContentView(w);\n    WebSettings s = w.getSettings();\n    s.setJavaScriptEnabled(true);\n    s.setDomStorageEnabled(true);\n    w.setWebViewClient(new WebViewClient());\n    w.setWebChromeClient(new WebChromeClient());\n    w.loadUrl("file:///android_asset/index.html");\n  }\n  @Override public void onBackPressed() {\n    if (w.canGoBack()) w.goBack(); else super.onBackPressed();\n  }\n}';
-  return [
-    '#!/data/data/com.termux/files/usr/bin/bash','set -e',
-    'trap \'echo "FAILED: run  pkg update && pkg upgrade -y  then run this script again"\' ERR',
-    'echo "[1/6] installing tools (first run takes a few minutes)"',
-    'pkg install -y aapt aapt2 ecj dx apksigner zip openjdk-17 >/dev/null',
-    'AJ="$PREFIX/share/aapt/android.jar"',
-    '[ -f "$AJ" ] || { echo "android.jar not found: $AJ"; exit 1; }',
-    'W="$HOME/apkstudio-'+mt.slug+'"',
-    'rm -rf "$W"; mkdir -p "$W/src" "$W/res/mipmap-xxxhdpi" "$W/assets" "$W/build/classes"','cd "$W"',
-    "cat > assets/index.html <<'"+E+"'",h,E,
-    "base64 -d > res/mipmap-xxxhdpi/ic_launcher.png <<'"+E+"'",png,E,
-    "cat > AndroidManifest.xml <<'"+E+"'",man,E,
-    "cat > src/MainActivity.java <<'"+E+"'",jv,E,
-    'echo "[2/6] resources"',
-    'aapt2 compile --dir res -o build/res.zip',
-    'aapt2 link -o build/base.apk -I "$AJ" --manifest AndroidManifest.xml -A assets --min-sdk-version 24 --target-sdk-version 28 build/res.zip',
-    'echo "[3/6] compiling"',
-    'ecj -bootclasspath "$AJ" -d build/classes src/MainActivity.java',
-    'dx --dex --output=build/classes.dex build/classes',
-    '(cd build && zip -q base.apk classes.dex)',
-    'echo "[4/6] signing"',
-    'KS="$HOME/.apkstudio.jks"',
-    '[ -f "$KS" ] || keytool -genkeypair -keystore "$KS" -alias k -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=AI Studio"',
-    'apksigner sign --ks "$KS" --ks-pass pass:android --out "$W/'+mt.slug+'.apk" build/base.apk',
-    'echo "[5/6] copying"',
-    'OUT="$W/'+mt.slug+'.apk"',
-    'if [ -d "$HOME/storage/downloads" ]; then cp "$OUT" "$HOME/storage/downloads/'+mt.slug+'.apk" && OUT="$HOME/storage/downloads/'+mt.slug+'.apk"; fi',
-    'echo "[6/6] done: $OUT"',
-    'termux-open "$OUT" || true',''
-  ].join('\n');
+$('#apkname').addEventListener('input',()=>{if(S.a.meta)S.a.meta.name=$('#apkname').value});
+$('#apkic').onclick=()=>{const c=$('#ic');if(!S.a.meta)return;c.toBlob(b=>{if(!b)return;const a=document.createElement('a'),u=URL.createObjectURL(b);a.href=u;a.download=S.a.meta.slug+'-icon.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),10000)},'image/png')};
+$('#apknew').onclick=()=>{const mt=S.a.meta;if(!mt)return;const h1=Math.floor(Math.random()*360);mt.c1='hsl('+h1+',70%,42%)';mt.c2='hsl('+((h1+50)%360)+',80%,55%)';drawIcon()};
+/* ربات ساخت APK با گیت‌هاب */
+const GH='https://api.github.com';
+const WF=$('#wf').textContent.replace(/^\n/,'');
+const ghm=(t,c)=>{const e=$('#ghm');e.textContent=t;e.style.color=c||''};
+const am=(t,c)=>{const e=$('#apkmsg');e.textContent=t;e.style.color=c||''};
+const b64u=t=>{const b=new TextEncoder().encode(t);let r='';for(let i=0;i<b.length;i+=32768)r+=String.fromCharCode.apply(null,b.subarray(i,i+32768));return btoa(r)};
+const REPO=/^[\w.-]+\/[\w.-]+$/;
+async function gh(path,opt){
+  const tk=$('#ghtok').value.trim();
+  if(!tk||/[^\x20-\x7E]/.test(tk))throw new Error('توکن گیت‌هاب رو در تنظیمات وارد کن.');
+  const o=Object.assign({method:'GET'},opt||{});
+  o.headers=Object.assign({Authorization:'Bearer '+tk,Accept:'application/vnd.github+json'},o.headers||{});
+  if(o.body&&typeof o.body!=='string'){o.body=JSON.stringify(o.body);o.headers['Content-Type']='application/json'}
+  delete o.soft;
+  return fetch(path.indexOf('http')===0?path:GH+path,o);
 }
-function dlFile(n,t,ty){const a=document.createElement('a'),u=URL.createObjectURL(new Blob([t],{type:ty}));a.href=u;a.download=n;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),10000)}
-$('#apn').addEventListener('input',()=>{if(S.a.meta)S.a.meta.name=$('#apn').value});
-$('#aps').onclick=()=>{const t=mkScript();if(!t)return;dlFile('build-apk.sh',t,'application/octet-stream');$('#apm').textContent='فایل دانلود شد. در ترموکس یک‌بار termux-setup-storage بزن و اجازه بده، بعد «کپی دستور» را بچسبان. بار اول نصب ابزارها چند دقیقه طول می‌کشد. اگر اسم فایل عوض شد، همان اسم را در دستور بنویس.'};
-$('#apt').onclick=async()=>{const c='bash ~/storage/downloads/build-apk.sh';try{await navigator.clipboard.writeText(c);$('#apm').textContent='دستور کپی شد: '+c}catch(e){$('#apm').textContent='این دستور را در ترموکس بزن: '+c}};
-$('#api').onclick=()=>{const c=$('#ic');if(!S.a.meta)return;c.toBlob(b=>{if(!b)return;const a=document.createElement('a'),u=URL.createObjectURL(b);a.href=u;a.download=S.a.meta.slug+'-icon.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),10000)},'image/png')};
-$('#apr').onclick=()=>{const mt=S.a.meta;if(!mt)return;const h1=Math.floor(Math.random()*360);mt.c1='hsl('+h1+',70%,42%)';mt.c2='hsl('+((h1+50)%360)+',80%,55%)';drawIcon()};
+async function ghj(path,opt){
+  const r=await gh(path,opt);let j=null;try{j=await r.json()}catch(e){}
+  if(!r.ok&&!(opt&&opt.soft)){
+    const m=(j&&j.message)||('HTTP '+r.status);
+    throw new Error(r.status===401?'توکن نامعتبر است.':r.status===403?'دسترسی توکن کافی نیست (repo و workflow لازم است): '+m:m);
+  }
+  return {ok:r.ok,status:r.status,j:j};
+}
+async function ghSetup(){
+  const btn=$('#ghset');btn.disabled=true;
+  try{
+    ghm('دارم وصل می‌شم...');
+    const u=(await ghj('/user')).j;
+    let repo=$('#ghrepo').value.trim();
+    if(!REPO.test(repo)){repo=u.login+'/apk-studio';$('#ghrepo').value=repo}
+    L('ghrepo',repo);
+    const rr=await ghj('/repos/'+repo,{soft:true});
+    if(!rr.ok){
+      if(rr.status!==404)throw new Error((rr.j&&rr.j.message)||('HTTP '+rr.status));
+      if(repo.split('/')[0].toLowerCase()!==u.login.toLowerCase())throw new Error('ریپو باید زیر اکانت خودت باشه: '+u.login+'/...');
+      ghm('دارم ریپوی خصوصی می‌سازم...');
+      await ghj('/user/repos',{method:'POST',body:{name:repo.split('/')[1],private:true,auto_init:true,description:'AI Studio APK builder'}});
+      await wait(3000);
+    }
+    ghm('دارم ربات ساخت رو نصب می‌کنم...');
+    const p='/repos/'+repo+'/contents/.github/workflows/build-apk.yml';
+    let sha=null;const ex=await ghj(p,{soft:true});if(ex.ok&&ex.j&&ex.j.sha)sha=ex.j.sha;
+    let last=null;
+    for(let i=0;i<5;i++){
+      const bd={message:'Add APK builder workflow',content:b64u(WF)};if(sha)bd.sha=sha;
+      const r=await ghj(p,{method:'PUT',body:bd,soft:true});
+      if(r.ok){last=null;break}
+      last=r;await wait(2000);
+    }
+    if(last)throw new Error((last.j&&last.j.message)||('HTTP '+last.status));
+    ghm('✅ آماده‌ست: '+repo+' (خصوصی). حالا یه اپ بساز و «ساخت APK» رو بزن.','var(--c)');
+  }catch(e){ghm('خطا: '+(e.name==='TypeError'?'اتصال به گیت‌هاب برقرار نشد (اینترنت یا VPN).':e.message),'var(--r)')}
+  finally{btn.disabled=false}
+}
+$('#ghset').onclick=ghSetup;
+let apkAsset=null;
+function showApk(repo,rel){
+  const a=rel.assets[0];apkAsset={repo:repo,a:a};
+  $('#apkdl').hidden=false;const g=$('#apkgh');g.href=rel.html_url;g.hidden=false;
+  am('✅ APK آماده است ('+Math.round(a.size/1024)+' KB). دکمه‌ی دانلود رو بزن و نصبش کن.','var(--c)');
+}
+async function buildApk(){
+  const mt=S.a.meta,h=S.a.html;if(!mt||!h)return;
+  const repo=$('#ghrepo').value.trim();
+  if(!$('#ghtok').value.trim()||!REPO.test(repo)){go(3);ghm('اول توکن گیت‌هاب رو بده و «راه‌اندازی خودکار» رو بزن.','var(--r)');return}
+  const b=$('#apkbuild');b.disabled=true;$('#apkdl').hidden=true;$('#apkgh').hidden=true;apkAsset=null;
+  try{
+    const nm=($('#apkname').value.trim()||mt.name).slice(0,30);
+    const id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+    const payload=JSON.stringify({name:nm,slug:mt.slug,html:h,icon:$('#ic').toDataURL('image/png').split(',')[1]});
+    am('۱/۴ دارم فایل‌ها رو می‌فرستم...');
+    await ghj('/repos/'+repo+'/contents/jobs/'+id+'.json',{method:'PUT',body:{message:'job '+id,content:b64u(payload)}});
+    const info=(await ghj('/repos/'+repo)).j;
+    am('۲/۴ دارم ربات رو روشن می‌کنم...');
+    const d=await gh('/repos/'+repo+'/actions/workflows/build-apk.yml/dispatches',{method:'POST',body:{ref:info.default_branch,inputs:{job:id}}});
+    if(d.status!==204){let m='';try{m=(await d.json()).message}catch(e){}throw new Error('شروع ساخت نشد: '+(m||d.status)+' (اول «راه‌اندازی خودکار» رو بزن.)')}
+    const t0=Date.now();
+    for(;;){
+      await wait(6000);
+      const sec=Math.round((Date.now()-t0)/1000);
+      if(sec>900)throw new Error('بیشتر از ۱۵ دقیقه طول کشید؛ تب Actions ریپو رو چک کن.');
+      const rl=await ghj('/repos/'+repo+'/releases/tags/apk-'+id,{soft:true});
+      if(rl.ok&&rl.j&&rl.j.assets&&rl.j.assets.length){showApk(repo,rl.j);return}
+      const rs=await ghj('/repos/'+repo+'/actions/runs?event=workflow_dispatch&per_page=10',{soft:true});
+      const run=rs.ok&&rs.j&&(rs.j.workflow_runs||[]).find(x=>x.display_title==='build '+id);
+      if(run&&run.status==='completed'&&run.conclusion!=='success')throw new Error('ساخت ناموفق بود ('+run.conclusion+'). لاگ: '+run.html_url);
+      am((run&&run.status==='in_progress'?'۳/۴ ربات داره اپ رو می‌سازه...':'۳/۴ منتظر شروع ربات...')+' ('+sec+' ثانیه)');
+    }
+  }catch(e){am('خطا: '+(e.name==='TypeError'?'اتصال به گیت‌هاب برقرار نشد (اینترنت یا VPN).':e.message),'var(--r)')}
+  finally{b.disabled=false}
+}
+$('#apkbuild').onclick=buildApk;
+$('#apkdl').onclick=async()=>{
+  if(!apkAsset)return;const b=$('#apkdl');b.disabled=true;am('دارم دانلود می‌کنم...');
+  try{
+    const r=await gh('/repos/'+apkAsset.repo+'/releases/assets/'+apkAsset.a.id,{headers:{Accept:'application/octet-stream'}});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const bl=await r.blob();
+    const u=URL.createObjectURL(new Blob([bl],{type:'application/vnd.android.package-archive'}));
+    const x=document.createElement('a');x.href=u;x.download=apkAsset.a.name;document.body.appendChild(x);x.click();x.remove();setTimeout(()=>URL.revokeObjectURL(u),60000);
+    am('✅ دانلود شد. فایل رو از پوشه‌ی Downloads باز کن و نصب کن.','var(--c)');
+  }catch(e){am('دانلود مستقیم نشد؛ از «صفحه‌ی APK در گیت‌هاب» دانلودش کن. ('+e.message+')','var(--r)')}
+  finally{b.disabled=false}
+};
 /* ناوبری */
 function go(n){
   [1,2,3].forEach(i=>{$('#v'+i).hidden=i!==n;document.querySelector('nav [data-v="'+i+'"]').setAttribute('aria-pressed',String(i===n))});
