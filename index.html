@@ -63,11 +63,13 @@ nav div{max-width:540px;margin:0 auto;display:grid;grid-template-columns:repeat(
 nav button{border:0;background:none;min-height:54px;font-size:12px;padding:6px 2px;color:var(--m)}
 nav button[aria-pressed=true]{color:var(--c);text-shadow:0 0 8px var(--c)}
 nav svg{width:22px;height:22px;display:block;margin:0 auto;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-#stop{position:fixed;inset-inline:14px;bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:6;max-width:532px;margin:0 auto;background:var(--r);color:#fff;border:0;font-weight:700}
+#stop{position:fixed;inset-inline:0;bottom:calc(78px + env(safe-area-inset-bottom,0px));z-index:6;width:max-content;max-width:calc(100% - 28px);margin:0 auto;display:flex;align-items:center;gap:10px;padding:6px 24px;border-radius:999px;background:rgba(34,5,12,.94);color:#ffb3c1;border:1px solid var(--r);box-shadow:0 0 26px -4px var(--r);font-weight:700;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+#stop i{width:12px;height:12px;border-radius:3px;background:var(--r);box-shadow:0 0 10px var(--r);animation:pl 1.4s ease-in-out infinite}
+@keyframes pl{50%{transform:scale(.7);opacity:.6}}
 a.lnk,a.go{display:inline-flex;align-items:center;justify-content:center;min-height:44px;border:1px solid var(--l);border-radius:10px;padding:6px 14px;color:var(--c);text-decoration:none;font-size:15px}
 a.go{display:flex;width:100%}
 [hidden]{display:none!important}
-@media(prefers-reduced-motion:reduce){h1 b{animation:none}}
+@media(prefers-reduced-motion:reduce){h1 b,#stop i{animation:none}}
 </style>
 </head>
 <body>
@@ -252,6 +254,7 @@ jobs:
         run: |
           set -euo pipefail
           gh release create "apk-$JOB" "w/out/$SLUG.apk" --title "$SLUG" --notes "Built by AI Studio"
+          gh release list --limit 100 --json tagName -q '.[5:][].tagName' | xargs -r -n1 gh release delete --cleanup-tag -y || true
 
       - name: Save signing key and clean up
         if: always()
@@ -259,10 +262,9 @@ jobs:
           git config user.name "apk-bot"
           git config user.email "apk-bot@users.noreply.github.com"
           git rm -q --ignore-unmatch "jobs/$JOB.json" || true
-          git add keystore || true
+          mkdir -p apks; cp "w/out/$SLUG.apk" "apks/$JOB.apk" || true; ls -t apks/*.apk 2>/dev/null | tail -n +6 | xargs -r rm -f; git add -A keystore apks || true
           git commit -q -m "apk $JOB [skip ci]" || true
-          git pull --rebase -q || true
-          git push -q || true
+          for i in 1 2 3 4 5; do git pull --rebase -q && git push -q && break; sleep 3; done || true
 </script>
 <script>
 const $=s=>document.querySelector(s);
@@ -277,7 +279,7 @@ const L=(k,v)=>{try{return v===undefined?localStorage.getItem(k):localStorage.se
   function draw(){
     cx.fillStyle='rgba(1,10,5,.13)';cx.fillRect(0,0,W,H);cx.font=S+'px monospace';
     for(let i=0;i<cols.length;i++){const y=cols[i]*S;cx.fillStyle=Math.random()<.05?'#d8ffe9':'#00ff84';cx.fillText(G[Math.random()*G.length|0],i*S,y);cols[i]=(y>H&&Math.random()>.975)?0:cols[i]+1}}
-  function step(t){raf=requestAnimationFrame(step);if(t-last<55)return;last=t;draw()}
+  function step(t){raf=requestAnimationFrame(step);if(t-last<90)return;last=t;draw()}
   function still1(){for(let k=0;k<50;k++)draw()}
   size();
   if(still){still1();addEventListener('resize',()=>{size();still1()});return}
@@ -286,34 +288,27 @@ const L=(k,v)=>{try{return v===undefined?localStorage.getItem(k):localStorage.se
   document.addEventListener('visibilitychange',()=>{cancelAnimationFrame(raf);if(!document.hidden)raf=requestAnimationFrame(step)});
 })();
 /* پرامپت‌ها */
-const RULES=`<output_format>
-Exactly ONE complete \`\`\`html code block, then one short summary line in the user's language. Think briefly (plan in at most 8 lines), then write the code. Keep the file under about 24 KB (CSS under 200 lines, JS under 100 lines). Finish with </html>.
-</output_format>
-<design_thinking>
-Before coding decide: purpose and audience; one bold aesthetic direction; the ONE memorable signature detail; a palette with a dominant color and one sharp accent; a display + body font pairing; the background atmosphere. Commit fully: a bold, cohesive vision beats a timid one. Match code complexity to the vision (maximalist needs richer CSS, minimal needs precision and restraint).
-</design_thinking>
-<aesthetics>
-- Typography: a distinctive display font paired with a refined body font; strong size contrast (hero at least 3x body); never Inter, Roboto, Arial or bare system fonts.
-- Color: CSS variables for every color; a dominant color with a sharp accent, not an evenly spread palette; text contrast at least 4.5:1; never a purple gradient on white.
-- Backgrounds: build atmosphere and depth with layered gradients, SVG patterns or an inline SVG noise filter; never one flat color.
-- Motion: CSS only; one orchestrated entrance with staggered animation-delay finished within 2s, plus clear hover, focus and active states; respect prefers-reduced-motion.
-- Layout: one strong hero, a deliberate spacing rhythm, an asymmetric or grid-breaking element; avoid the template of a centered hero plus three identical cards; icons as inline SVG, not rows of emoji.
-- Content: real, specific copy in the user's language; every person, brand and place INVENTED; no external images (CSS, SVG and emoji accents only).
-</aesthetics>
+const RULES=`<output>
+Reply with ONE complete \`\`\`html block and one short summary line in the user's language. Plan in at most 15 short lines (audience, palette with hex values, fonts, the layout of each section, the signature element, the JS interactions and their ids), then write the code. HARD LIMIT: the whole file stays under 220 KB. Budget: about 600 lines of CSS, 8 to 12 sections (or 5 app screens), JS only for real interactions. If space runs short, cut sections, never leave the file unfinished. Start with <!DOCTYPE html>, end with </html>.
+</output>
+<design>
+Ground the design in the subject's own world (its objects, materials, vocabulary), never a generic template; follow the design brief if one is given. Choose ONE direction and ONE memorable signature element, spend the boldness there, and keep everything else quiet and disciplined. Palette: a dominant color plus one sharp accent, all as CSS variables, text contrast at least 4.5:1. Type: a distinctive display font plus a refined body font, clear size scale, hero at least 3x body. Never Inter, Roboto, Arial or bare system fonts, never a purple gradient on white, and avoid the cream-plus-terracotta and black-plus-acid-green defaults unless the brief asks for them. Background: layered gradients or inline SVG for depth, never one flat color. Layout: no row of identical rounded cards; use one asymmetric or grid-breaking element and vary radius and spacing by hierarchy. Do not accent a single headline word, and use ALL-CAPS labels or 01/02/03 numbering only if the content really is a sequence. Icons are inline SVG, no external images. Copy is specific, plain and invented; a button says exactly what it does.
+</design>
+<motion>
+CSS only: one staggered entrance under 2s, clear hover, focus and active states, and respect prefers-reduced-motion.
+</motion>
 <persian>
-When the request is Persian: html lang="fa" dir="rtl"; fonts only Vazirmatn, Lalezar, Markazi Text, Noto Naskh Arabic, Noto Sans Arabic, Amiri, with a Persian font in EVERY font-family list; no letter-spacing or italics on Persian text; body line-height 1.9 and font-size at least 16px; logical CSS properties (margin-inline, padding-inline, inset-inline); Persian digits in visible numbers.
+Persian request: html lang="fa" dir="rtl"; fonts only Vazirmatn, Lalezar, Markazi Text, Noto Naskh Arabic, Noto Sans Arabic, Amiri, with one of them in EVERY font-family list; no letter-spacing or italics; body 16px or more with line-height 1.9; logical CSS properties; Persian digits in visible numbers.
 </persian>
-<layout>
-Design for 360px width first. *{box-sizing:border-box}; img,svg,video{max-width:100%}; no fixed widths over 100%; flex-wrap, min-width:0, overflow-wrap:anywhere; no overlapping text; no overflow-x:hidden hacks; touch targets at least 44px; inputs font-size at least 16px; fixed bars must not cover content (pad the body); full-height areas use min-height:100vh then min-height:100dvh; content visible without JavaScript.
-</layout>
-<code_quality>
-Starts with <!DOCTYPE html>, ends with </html>. Include a <title>. Only external resource is ONE Google Fonts link. Unique ids; every href is an existing #id (never "#"); buttons are type="button". Semantic landmarks (header, main, nav, footer) and visible :focus-visible styles. Plain ES2017 in ONE script tag at the end of body, ASCII quotes, no alert/confirm/prompt, no inline on* attributes (use addEventListener), null-check elements, localStorage only inside try/catch. Every control you render must work. No TODO, no lorem ipsum, no unrequested features.
-</code_quality>
-<self_review>
-Before answering, silently verify: every id used in JS exists in the HTML; every button and form has a working handler; CSS braces balance; nothing overflows at 360px; contrast is readable; the file ends with </html>. Fix anything wrong, then output only the final file.
-</self_review>`;
-const SYS_S='You are a senior front-end engineer and award-winning designer. Turn a short request into ONE finished, memorable, bug-free website (single index.html, inline CSS and JS). It must feel hand-designed for this specific subject, never templated. When editing an existing file, change only what was asked and keep everything else intact.\n'+RULES;
-const SYS_A='You are a senior mobile app designer-engineer. Turn a short request into ONE finished Android-style app UI as a single index.html that behaves like a native app when added to the home screen: full-height app shell (100dvh), top app bar, bottom tab bar with 2-4 screens switched by JavaScript, working interactions (lists, forms, counters, timers or whatever the request needs) with state kept in memory and optional localStorage, Material-like touch feedback, safe-area padding (env(safe-area-inset-*)), viewport-fit=cover, theme-color meta. Mobile only, no desktop layout. WEBVIEW: the file is packaged into an Android WebView app loaded from file:///android_asset/index.html and must work offline: relative paths only, no service worker, no ES modules, no fetch of local files, no file download, print or camera features, data only in localStorage (try/catch), opaque backgrounds, system-font fallbacks. Screens must be visible without a click for the first tab. Give it a distinctive visual identity (not default Material blue), seed the first screen with realistic invented sample data so it never looks empty. When editing an existing file, change only what was asked and keep everything else intact.\n'+RULES;
+<code>
+Mobile first at 360px: box-sizing border-box, flex-wrap, min-width:0, overflow-wrap:anywhere, no horizontal scroll, touch targets 44px or more, input font-size 16px or more, fixed bars never cover content. One <title>. The only external resource is ONE Google Fonts link. Unique ids, every href an existing #id, buttons type="button", visible :focus-visible. One plain ES2017 script at the end of body, no alert/confirm/prompt, no inline on* attributes, null-check elements, localStorage only inside try/catch. Every control must work. No TODO, no lorem ipsum, no unrequested features. Include empty, error and loading states where data can be missing. Every input has a label and every icon-only button has an aria-label. Match code complexity to the design. Use semantic HTML (header, main, nav, section, footer) with exactly one h1. Put touch-action:manipulation on buttons and links. Body text lines stay under 70 characters. Text over images or gradients keeps 4.5:1 contrast. Fixed or sticky bars add env(safe-area-inset-*) padding.
+</code>
+<final>
+Before you stop: exactly one html block, the file ends with </html>, and every control works.
+</final>`;
+const APPX='\nAPP FONTS: the app is offline, so use NO Google Fonts link and no external resources at all. Use font-family:Vazirmatn,Tahoma,"Segoe UI",sans-serif. This overrides the font rules above.\nAPP TOUCH: add -webkit-tap-highlight-color:transparent, overscroll-behavior:none and user-select:none on buttons; no hover-only actions; touch targets 44px or more; declare height:100vh before height:100dvh as a fallback.';
+const SYS_S='You are a senior front-end engineer and award-winning designer. Turn a short request into ONE finished, memorable, bug-free website (single index.html, inline CSS and JS). It must feel hand-designed for this specific subject, never templated. SITE: the first screen at 360px shows the core message and ONE clear call to action; every section has a purpose; the page ends with a clear contact or next step. When editing an existing file, change only what was asked and keep everything else intact.\n'+RULES;
+const SYS_A='You are a senior mobile app designer-engineer. Turn a short request into ONE finished Android-style app UI as a single index.html that behaves like a native app when added to the home screen: full-height app shell (100dvh), top app bar, bottom tab bar with 2-5 screens switched by JavaScript, working interactions (lists, forms, counters, timers or whatever the request needs) with state kept in memory and saved to localStorage, Material-like touch feedback, safe-area padding (env(safe-area-inset-*)), viewport-fit=cover, theme-color meta. Mobile only, no desktop layout. WEBVIEW: the file is packaged into an Android WebView app loaded from file:///android_asset/index.html and must work offline: relative paths only, no service worker, no ES modules, no fetch of local files, no file download, print or camera features, data only in localStorage (try/catch), opaque backgrounds, system-font fallbacks. Screens must be visible without a click for the first tab. APP: the app bar and tab bar stay fixed; content scrolls inside main with overscroll-behavior:contain and padding-bottom equal to the tab bar height plus env(safe-area-inset-bottom); the active tab is clearly marked; destructive actions ask for a second tap inside the UI; every empty list shows a friendly message with one action; user data is saved in localStorage so it survives a restart; inputs use the right type or inputmode. Give it a distinctive visual identity (not default Material blue), seed the first screen with realistic invented sample data so it never looks empty. When editing an existing file, change only what was asked and keep everything else intact.\n'+RULES;
 const BRIEF='You are an art director. Given a request and an aesthetic direction, reply with a SHORT design brief (max 120 words, same language as the request): audience and purpose; direction; ONE memorable signature detail; palette as 4 named hex colors (dominant, sharp accent, surface, text with contrast of at least 4.5:1 on the surface); display + body font (Persian: only Vazirmatn, Lalezar, Markazi Text, Noto Naskh Arabic, Noto Sans Arabic or Amiri); background atmosphere; hero idea; sections or screens; one orchestrated entrance motion. Avoid generic choices (centered hero with three identical cards, purple gradient on white, Inter/Roboto). Invent all names. No code.';
 const ENH='You rewrite a short website or app request into a richer, specific, buildable request (max 90 words, same language, no markdown, no code): subject, audience, key sections or screens, features, mood. Do not add real brands or people. Reply with the rewritten request only.';
 const DIRS=[['auto','خودکار'],['neon cyber-noir with glowing neon accents and glass panels','سایبر نئون'],['editorial magazine: huge type, tight grid, rules','مجله‌ای'],['neo-brutalist: thick borders, flat bold colors, hard shadows','برالیست'],['retro-futuristic: CRT glow, mono type, scanlines','رترو فیوچر'],['luxury minimal: whitespace, refined type, one metallic accent','مینیمال لوکس'],['playful gaming: bold shapes, vivid gradients','گیمینگ']];
@@ -359,14 +354,14 @@ $('#key').value=L('key')||'';if(L('base'))$('#base').value=L('base');if(L('balur
 ['key','base','balurl','ghtok','ghrepo'].forEach(k=>['change','input'].forEach(ev=>$('#'+k).addEventListener(ev,()=>L(k,$('#'+k).value))));
 sel.addEventListener('change',()=>L('model',sel.value));
 const log=(m,t,bad,clr)=>{const e=$('#lg'+m);if(clr)e.textContent='';if(!t)return;const d=document.createElement('div');if(bad)d.className='e';d.textContent=t;e.appendChild(d);e.scrollTop=e.scrollHeight};
-const IDS=['gos','goa','fixs','fixa','aps','apa','ups','upa','uns','una','ens','ena','rf','apkbuild'];
+const IDS=['apkbuild','gos','goa','fixs','fixa','aps','apa','ups','upa','uns','una','ens','ena','rf'];
 const busy=b=>{IDS.forEach(i=>{const e=$('#'+i);if(e)e.disabled=b});$('#stop').hidden=!b};
 DIRS.forEach(([v,n],i)=>{const b=document.createElement('button');b.type='button';b.textContent=n;b.setAttribute('aria-pressed',String(i===0));
   b.onclick=()=>{dir=v;$('#dirs').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)))};$('#dirs').appendChild(b)});
 ['s','a'].forEach(m=>EX[m].forEach(([n,t])=>{const b=document.createElement('button');b.type='button';b.textContent=n;b.onclick=()=>{$('#q'+m).value=t};$('#ex'+m).appendChild(b)}));
 /* موجودی API */
 const bal=$('#bal');
-const NUMK=/balance|available|remaining|credit|quota|usage|used|total|limit|usd|amount|cost/i;
+const NUMK=/balance|available|remaining|credit|quota/i;
 function nums(o,out,d){
   if(o==null||typeof o!=='object'||d>4||out.length>=6)return out;
   for(const k of Object.keys(o)){
@@ -386,7 +381,7 @@ async function refreshBal(loud){
   let b,o;
   try{b=base();o=new URL(b).origin}catch(e){bal.textContent='موجودی: —';if(loud)bm('Base URL معتبر نیست.','var(--r)');return}
   balBusy=true;bal.disabled=true;$('#bl').disabled=true;if(loud)bm('دارم موجودی رو می‌گیرم...');
-  const cu=$('#balurl').value.trim(),sv=L('balok');
+  const cu=$('#balurl').value.trim(),s0=L('balok'),sv=(s0&&s0.indexOf(o+'/')===0)?s0:null;
   const list=cu?[cu]:[...new Set([sv,b+'/credits',b+'/credits/balance',b+'/balance',b+'/user/balance',b+'/account/balance',b+'/dashboard/billing/credit_grants',b+'/dashboard/billing/subscription',b+'/key/info',b+'/user/info',o+'/credits',o+'/api/user/self'].filter(Boolean))];
   let found=null,lastErr='';
   try{
@@ -443,8 +438,8 @@ async function ask(msgs,max,label,m){
     if(stopped)throw new Error('متوقف شد');
     const body={model:sel.value,messages:msgs,stream:true,temperature:P.t||1,top_p:P.p||.95,max_tokens:mx};
     if(useK)body.top_k=P.k;if(useS)body.reasoning_split=true;
-    const ac=new AbortController();curAc=ac;let last=Date.now();
-    const wd=setInterval(()=>{if(Date.now()-last>150000)ac.abort()},5000);
+    const ac=new AbortController();curAc=ac;let last=Date.now(),got=false;
+    const wd=setInterval(()=>{if(Date.now()-last>(got?150000:600000))ac.abort()},5000);
     try{
       let r;
       try{r=await fetch(base()+'/chat/completions',{method:'POST',signal:ac.signal,headers:{'Content-Type':'application/json',Authorization:'Bearer '+kk},body:JSON.stringify(body)})}
@@ -471,7 +466,7 @@ async function ask(msgs,max,label,m){
         const dl=ch.delta||{};if(dl.content)out+=dl.content;
         if(++n%25===0){const lc=$('#lg'+m).lastChild;if(lc)lc.textContent=label+' '+out.length+' نویسه'}
       };
-      try{for(;;){const {done,value}=await rd.read();if(done)break;last=Date.now();const ck=dec.decode(value,{stream:true});if(raw.length<400000)raw+=ck;buf+=ck;const ls=buf.split('\n');buf=ls.pop();ls.forEach(handle)}}
+      try{for(;;){const {done,value}=await rd.read();if(done)break;last=Date.now();got=true;const ck=dec.decode(value,{stream:true});if(raw.length<400000)raw+=ck;buf+=ck;const ls=buf.split('\n');buf=ls.pop();ls.forEach(handle)}}
       catch(re){if(re.name!=='TypeError'||out.length<300)throw re;lastCut=true;log(m,'اتصال وسط پاسخ قطع شد؛ ادامه می‌گیرم.',1)}
       buf+=dec.decode();if(buf.trim())handle(buf);
       if(!out&&raw.trim().charAt(0)==='{'){
@@ -496,7 +491,8 @@ const strip=t=>t.replace(/<think>[\s\S]*?<\/think>/g,'').replace(/^[\s\S]*<\/thi
 function extract(t){
   t=t.replace(/<think>[\s\S]*?<\/think>/g,'');if(/<think>/.test(t))return '';
   if(/<\/think>/.test(t))t=t.split('</think>').pop();
-  const k=t.match(/```html\s*([\s\S]*?)```/i)||t.match(/```html\s*([\s\S]*)$/i);
+  {const m=t.match(/<!DOCTYPE html[\s\S]*<\/html>/i);if(m)return m[0].trim()}
+  const k=t.match(/```html\s*([\s\S]*?)\s*```\s*[^`]*$/i)||t.match(/```html\s*([\s\S]*)$/i);
   return (k?k[1]:(t.match(/<!DOCTYPE[\s\S]*<\/html>/i)||[''])[0]).trim();
 }
 /* اصلاح خودکار و بررسی */
@@ -520,15 +516,15 @@ function autofix(h){
   if(/@keyframes|animation\s*:/.test(h)&&!/prefers-reduced-motion/.test(h))h=h.replace(/<\/head>/i,()=>'<style>@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}</style></head>');
   return h;
 }
-function check(h){
+function check(h,app){
   const p=[];
-  const css=[...h.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)].map(x=>x[1]).join('\n');
+  if(app&&/fonts\.googleapis\.com/i.test(h))p.push('no Google Fonts link in an app: it must work offline');const css=[...h.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)].map(x=>x[1]).join('\n');
   if(!/^<!DOCTYPE html/i.test(h))p.push('must start with <!DOCTYPE html>');
   if(!/<\/html>\s*$/i.test(h))p.push('file is incomplete: it must end with </html>');
   if(h.length<2500)p.push('design is too minimal: make it richer');
   if(!/<title>[^<]+<\/title>/i.test(h))p.push('add a <title>');
   if((h.match(/<link[^>]+rel\s*=\s*["']stylesheet["']/gi)||[]).length>1)p.push('use only ONE Google Fonts <link>, merge families into one URL');
-  if(/lorem ipsum|(\/\/|<!-{2}|\/\*)\s*(TODO|\.\.\.)/i.test(h))p.push('remove placeholders');
+  if(/lorem ipsum/i.test(h))p.push('remove placeholders');
   if((h.match(/<script[\s>]/gi)||[]).length!==(h.match(/<\/script>/gi)||[]).length)p.push('unclosed <script> tag');
   if((css.match(/\{/g)||[]).length!==(css.match(/\}/g)||[]).length)p.push('CSS braces are not balanced');
   if(/<(?:script|img|iframe|source|video|audio)\b[^>]*\bsrc\s*=\s*["']?(?:https?:)?\/\//i.test(h)||/url\(\s*["']?(?:https?:)?\/\//i.test(h)||/@import/i.test(css))p.push('no external scripts, images or @import: inline only (Google Fonts link is allowed)');
@@ -542,21 +538,22 @@ function check(h){
   if(miss.length)p.push('links point to ids that do not exist: '+miss.join(', '));
   if((h.match(/[\u0600-\u06FF]/g)||[]).length>40){
     if(!/<html[^>]*\bdir\s*=\s*["']?rtl/i.test(h))p.push('Persian page: use <html lang="fa" dir="rtl">');
-    if(!/fonts\.googleapis\.com\/css2?\?[^"']*family=(?:Vazirmatn|Lalezar|Markazi\+Text|Noto\+(?:Naskh|Sans|Kufi)\+Arabic|Amiri|Scheherazade\+New)/i.test(h))p.push('Persian page: load a Persian-capable Google Font in the fonts link');
+    if(!app&&!/fonts\.googleapis\.com\/css2?\?[^"']*family=(?:Vazirmatn|Lalezar|Markazi\+Text|Noto\+(?:Naskh|Sans|Kufi)\+Arabic|Amiri|Scheherazade\+New)/i.test(h))p.push('Persian page: load a Persian-capable Google Font in the fonts link');
   }
   let js='';const re=/<script([^>]*)>([\s\S]*?)<\/script>/gi;let k;
   while((k=re.exec(h))){
     if(/\bsrc\s*=/.test(k[1]))continue;
     const ty=(k[1].match(/type\s*=\s*["']?([^"'\s>]+)/i)||[])[1];if(ty&&!/javascript|ecmascript|module/i.test(ty))continue;
-    js+=k[2]+'\n';try{new Function(k[2])}catch(e){p.push('JavaScript syntax error: '+e.message)}
+    js+=k[2]+'\n';try{if(!/module/i.test(ty||''))new Function(k[2])}catch(e){p.push('JavaScript syntax error: '+e.message)}
   }
-  if(/\b(alert|confirm|prompt)\s*\(/.test(js))p.push('do not use alert/confirm/prompt');
+  if(/(^|[^.\w$]|window\.)(alert|confirm|prompt)\s*\(/.test(js))p.push('do not use alert/confirm/prompt');
   const used=[...js.matchAll(/getElementById\(\s*["']([^"']+)["']\s*\)/g)].map(x=>x[1]).concat([...js.matchAll(/querySelector\(\s*["']#([\w-]+)["']\s*\)/g)].map(x=>x[1]));
   const mi=[...new Set(used.filter(x=>!all.has(x)))].slice(0,5);
   if(mi.length)p.push('JavaScript uses ids that do not exist in the HTML: '+mi.join(', '));
   return p;
 }
 function hookBody(){
+  try{localStorage.getItem('x')}catch(x){var mem={};try{Object.defineProperty(window,'localStorage',{value:{getItem:function(k){return k in mem?mem[k]:null},setItem:function(k,v){mem[k]=String(v)},removeItem:function(k){delete mem[k]},clear:function(){mem={}}}})}catch(y){}}
   addEventListener('error',function(e){if(/ResizeObserver/.test(e.message||''))return;try{parent.postMessage({err:(e.message||'error')+' (line '+e.lineno+')'},'*')}catch(x){}});
   addEventListener('unhandledrejection',function(e){try{parent.postMessage({err:'Promise: '+((e.reason&&e.reason.message)||e.reason)},'*')}catch(x){}});
   document.addEventListener('click',function(e){
@@ -569,8 +566,9 @@ const HOOK='<scr'+'ipt>('+hookBody.toString()+')();<\/scr'+'ipt>';
 const withHook=h=>/<head(\s[^>]*)?>/i.test(h)?h.replace(/<head(\s[^>]*)?>/i,x=>x+HOOK):/<html(\s[^>]*)?>/i.test(h)?h.replace(/<html(\s[^>]*)?>/i,x=>x+HOOK):HOOK+h;
 function show(m,h,keep){
   const s=S[m];s.html=h;s.errs=[];$('#eb'+m).hidden=true;$('#cd'+m).value=h;
-  if(!keep){s.vers.push(h);if(s.vers.length>15)s.vers.shift()}
+  if(!keep){if(s.fresh){s.vers=[];s.fresh=false}s.vers.push(h);if(s.vers.length>15)s.vers.shift()}
   $('#fr'+m).srcdoc=withHook(h);
+  if(m==='a'&&!keep){apkAsset=null;['apkdl','apkgh'].forEach(function(i){const e=$('#'+i);if(e)e.hidden=true})}
   if(!keep){s.watch=true;s.until=Date.now()+60000}
 }
 function maybeAuto(m){
@@ -589,9 +587,9 @@ addEventListener('message',e=>{
 /* ساخت */
 async function gen(m,text,fresh,isAuto){
   if(running)return;running=true;stopped=false;busy(true);log(m,'',0,1);
-  let done=false;S[m].watch=false;S[m].auto=isAuto?(S[m].auto||0)+1:0;
+  let done=false;S[m].watch=false;S[m].auto=isAuto?(S[m].auto||0)+1:0;S[m].fresh=!!fresh;
   try{
-    const SYS=m==='a'?SYS_A:SYS_S;let u;
+    const SYS=m==='a'?SYS_A+APPX:SYS_S;let u;
     if(fresh){
       u='Request: '+text+'\nAesthetic direction: '+(m==='a'?'auto (a polished Android app feel)':dir==='auto'?'auto (choose what fits the subject)':dir);
       log(m,'۱) دارم طرح می‌کشم...');
@@ -600,26 +598,26 @@ async function gen(m,text,fresh,isAuto){
         if(b&&!/<think>/.test(b)){u+='\n\nDesign brief (follow it):\n'+b;log(m,'طرح آماده شد:\n'+b.slice(0,300))}
       }catch(e){if(stopped)throw e;log(m,'طرح رد شد؛ مستقیم کد می‌نویسم.',1)}
     }else u='Here is the current file (index.html):\n```html\n'+S[m].html+'\n```\n\nTask: '+text;
-    let msgs=[{role:'system',content:SYS},{role:'user',content:u}],best='';
+    const EDITX='\nEDIT MODE: do exactly what the task asks and return the full file. The 220 KB limit and the size budget above do NOT apply: never shrink, simplify or drop existing content, and keep the existing design unless the task says otherwise.';let msgs=[{role:'system',content:SYS+(fresh?'':EDITX)},{role:'user',content:u}],best='';
     for(let i=0;i<3;i++){
       if(stopped)throw new Error('متوقف شد');
       log(m,'۲) دارم کد می‌نویسم...');
       const raw=await ask(msgs,32000,'۲) کد:',m);let h=extract(raw),cut=lastCut;
-      if(h&&!/<\/html>\s*$/i.test(h)&&!stopped){
+      if(h&&!/<\/html>\s*$/i.test(h)){
         log(m,'خروجی نصفه موند؛ ادامه‌ش رو می‌گیرم...',1);
         const r2=await ask([...msgs,{role:'assistant',content:'```html\n'+h},{role:'user',content:'Continue EXACTLY from the last character above. Output only the remaining code, no repetition, no opening fence. End with </html> and a closing fence.'}],32000,'ادامه:',m);
         let add=strip(r2).replace(/^\s*```(?:html)?[ \t]*\n?/i,'').replace(/```[\s\S]*$/,'');
-        h=/^\s*<!DOCTYPE/i.test(add)?add.trim():(h+add).trim();cut=true;
+        if(/^\s*<!DOCTYPE/i.test(add)){h=add.trim()}else{let ov=0;const tl=h.slice(-400);for(let k=Math.min(tl.length,add.length);k>=15;k--){if(add.startsWith(tl.slice(tl.length-k))){ov=k;break}}h=(h+add.slice(ov)).trim()}cut=false;
       }
-      if(h)h=autofix(h);
+      if(h&&!/<\/html>\s*$/i.test(h))cut=true;if(h)h=autofix(h);
       if(h&&best&&h.length<best.length*.5){log(m,'پاسخ خیلی کوتاه بود؛ دوباره می‌پرسم.',1);continue}
       if(h)best=h;
-      const p=h?check(h):['reply with one complete ```html block'];
+      const p=h?check(h,m==='a'):['reply with one complete ```html block'];
       if(!p.length){show(m,h);done=true;if(m==='a'&&fresh)await mkMeta(m,text);log(m,'✓ همه چک‌ها (نحو، ساختار، فونت، لینک‌ها) قبول شد. آماده‌ست.');return}
       if(i<2){
         log(m,'ایراد پیدا شد، اصلاح می‌کنم ('+(i+1)+'/2): '+p.join('، '),1);
         const last=msgs[msgs.length-1];
-        if(cut||!h)msgs=[...msgs.slice(0,-1),{role:'user',content:last.content+'\n\nYour previous answer was cut off or invalid ('+p.join('; ')+'). Write a more compact but complete version under 14 KB. Return the full file in one ```html block.'}];
+        if(!fresh&&!h){}else if((cut&&fresh)||!h)msgs=[...msgs.slice(0,-1),{role:'user',content:last.content+'\n\nYour previous answer was cut off or invalid ('+p.join('; ')+'). Write a more compact but complete version under 60 KB (less CSS, fewer sections, short JS). Return the full file in one ```html block.'}];
         else msgs=[...msgs,{role:'assistant',content:'```html\n'+h+'\n```'},{role:'user',content:'Problems found: '+p.join('; ')+'. Fix them and return the full corrected file in one ```html block.'}];
       }else{
         if(best&&/<\/html>\s*$/i.test(best)){show(m,best);done=true;if(m==='a'&&fresh)await mkMeta(m,text);log(m,'این ایرادها مونده: '+p.join('، ')+'. «ارتقای طراحی» یا «تغییر بده» رو امتحان کن.',1)}
@@ -635,7 +633,7 @@ async function gen(m,text,fresh,isAuto){
     log(m,'خطا: '+(e.name==='TypeError'?'اتصال برقرار نشد (اینترنت، VPN یا CORS).':e.message),1);
   }finally{busy(false);running=false;curAc=null;setTimeout(()=>{refreshBal(false)},1500);setTimeout(()=>{maybeAuto(m)},2500)}
 }
-$('#stop').onclick=()=>{stopped=true;if(curAc)curAc.abort();log(mode,'⏹ دارم متوقف می‌کنم...')};
+$('#stop').innerHTML='<i aria-hidden="true"></i>توقف';$('#stop').onclick=()=>{stopped=true;if(curAc)curAc.abort();log(mode,'⏹ دارم متوقف می‌کنم...')};
 const need=m=>{if(!$('#key').value.trim()){go(3);ms('API key رو وارد کن.','var(--r)');return false}L('model',sel.value);return true};
 /* بهتر کردن پرامپت */
 async function enhance(m){
@@ -661,7 +659,7 @@ async function enhance(m){
   $('#un'+m).onclick=()=>{if(running)return;const s=S[m];if(s.vers.length<2)return log(m,'نسخه قبلی وجود نداره.',1,1);s.vers.pop();show(m,s.vers[s.vers.length-1],true);log(m,'به نسخه قبلی برگشتی.',0,1)};
   const tab=n=>{$('#pv'+m).hidden=n!==1;$('#cv'+m).hidden=n!==2;$('#t1'+m).setAttribute('aria-pressed',String(n===1));$('#t2'+m).setAttribute('aria-pressed',String(n===2))};
   $('#t1'+m).onclick=()=>tab(1);$('#t2'+m).onclick=()=>tab(2);
-  $('#fs'+m).onclick=()=>{const h=S[m].html;if(!h)return;const u=URL.createObjectURL(new Blob([h],{type:'text/html;charset=utf-8'}));window.open(u,'_blank','noopener');setTimeout(()=>URL.revokeObjectURL(u),600000)};
+  $('#fs'+m).onclick=()=>{const f=$('#fr'+m);if(!S[m].html||!f)return;try{const p=f.requestFullscreen?f.requestFullscreen():(f.webkitRequestFullscreen&&f.webkitRequestFullscreen());if(p&&p.catch)p.catch(()=>log(m,'تمام‌صفحه روی این گوشی ممکن نیست.',1))}catch(e){log(m,'تمام‌صفحه ممکن نشد.',1)}};
   $('#cp'+m).onclick=async()=>{const h=S[m].html;if(!h)return;const b=$('#cp'+m);try{await navigator.clipboard.writeText(h);b.textContent='کپی شد'}catch(e){$('#cd'+m).select();b.textContent='انتخاب شد، کپی کن'}setTimeout(()=>{b.textContent='کپی کد'},2000)};
   $('#dl'+m).onclick=()=>{const h=S[m].html;if(!h)return;const a=document.createElement('a'),u=URL.createObjectURL(new Blob([h],{type:'text/html;charset=utf-8'}));a.href=u;a.download=m==='a'?'app.html':'index.html';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),10000)};
 });
@@ -723,6 +721,7 @@ async function ghSetup(){
     if(!REPO.test(repo)){repo=u.login+'/apk-studio';$('#ghrepo').value=repo}
     L('ghrepo',repo);
     const rr=await ghj('/repos/'+repo,{soft:true});
+    if(rr.ok&&rr.j&&rr.j.private!==true)throw new Error('این ریپو عمومیه و کلید امضا لو می‌ره. اول خصوصیش کن یا اسم دیگه بده.');
     if(!rr.ok){
       if(rr.status!==404)throw new Error((rr.j&&rr.j.message)||('HTTP '+rr.status));
       if(repo.split('/')[0].toLowerCase()!==u.login.toLowerCase())throw new Error('ریپو باید زیر اکانت خودت باشه: '+u.login+'/...');
@@ -746,9 +745,9 @@ async function ghSetup(){
   finally{btn.disabled=false}
 }
 $('#ghset').onclick=ghSetup;
-let apkAsset=null;
+let apkAsset=null,apkRun=false;
 function showApk(repo,rel){
-  const a=rel.assets[0];apkAsset={repo:repo,a:a};
+  const a=rel.assets[0];apkAsset={repo:repo,a:a,id:rel.tag_name.slice(4)};
   $('#apkdl').hidden=false;const g=$('#apkgh');g.href=rel.html_url;g.hidden=false;
   am('✅ APK آماده است ('+Math.round(a.size/1024)+' KB). دکمه‌ی دانلود رو بزن و نصبش کن.','var(--c)');
 }
@@ -762,6 +761,7 @@ async function buildApk(){
     const id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);
     const payload=JSON.stringify({name:nm,slug:mt.slug,html:h,icon:$('#ic').toDataURL('image/png').split(',')[1]});
     am('۱/۴ دارم فایل‌ها رو می‌فرستم...');
+    {const pi=(await ghj('/repos/'+repo)).j;if(!pi||pi.private!==true)throw new Error('ریپو خصوصی نیست؛ ساخت متوقف شد.')}
     await ghj('/repos/'+repo+'/contents/jobs/'+id+'.json',{method:'PUT',body:{message:'job '+id,content:b64u(payload)}});
     const info=(await ghj('/repos/'+repo)).j;
     am('۲/۴ دارم ربات رو روشن می‌کنم...');
@@ -782,11 +782,11 @@ async function buildApk(){
   }catch(e){am('خطا: '+(e.name==='TypeError'?'اتصال به گیت‌هاب برقرار نشد (اینترنت یا VPN).':e.message),'var(--r)')}
   finally{b.disabled=false}
 }
-$('#apkbuild').onclick=buildApk;
+$('#apkbuild').onclick=async()=>{if(apkRun)return;apkRun=true;try{await buildApk()}finally{apkRun=false}};
 $('#apkdl').onclick=async()=>{
   if(!apkAsset)return;const b=$('#apkdl');b.disabled=true;am('دارم دانلود می‌کنم...');
   try{
-    const r=await gh('/repos/'+apkAsset.repo+'/releases/assets/'+apkAsset.a.id,{headers:{Accept:'application/octet-stream'}});
+    let r;for(let i=0;i<8;i++){r=await gh('/repos/'+apkAsset.repo+'/contents/apks/'+apkAsset.id+'.apk',{headers:{Accept:'application/vnd.github.raw+json'}});if(r.status!==404)break;await wait(5000)}
     if(!r.ok)throw new Error('HTTP '+r.status);
     const bl=await r.blob();
     const u=URL.createObjectURL(new Blob([bl],{type:'application/vnd.android.package-archive'}));
