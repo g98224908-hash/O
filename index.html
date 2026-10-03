@@ -118,6 +118,7 @@ a.go{display:flex;width:100%}
 </div></nav>
 <script type="text/plain" id="wf">
 name: Build APK
+# studio-wf: alarm-3
 run-name: build ${{ inputs.job }}
 
 on:
@@ -172,13 +173,285 @@ jobs:
           manifest = '''<?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="__PKG__">
           <uses-permission android:name="android.permission.INTERNET"/>
+          __PERMS__
           <application android:label="__LABEL__" android:icon="@mipmap/ic_launcher" android:supportsRtl="true" android:allowBackup="false" android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
           <activity android:name=".MainActivity" android:exported="true" android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout|uiMode" android:windowSoftInputMode="adjustResize">
           <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
           </activity>
+          __RECV__
           </application>
           </manifest>'''
-          java = '''package __PKG__;
+          j_MainActivity = '''package __PKG__;
+          import android.app.Activity;
+          import android.content.Intent;
+          import android.os.Build;
+          import android.os.Bundle;
+          import android.webkit.WebChromeClient;
+          import android.webkit.WebResourceRequest;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+          public class MainActivity extends Activity {
+            private WebView w;
+            private void lockFlags(Intent in) {
+              if (Build.VERSION.SDK_INT >= 27 && in != null && in.getBooleanExtra("fromAlarm", false)) {
+                setShowWhenLocked(true);
+                setTurnScreenOn(true);
+              }
+            }
+            @Override protected void onNewIntent(Intent in) {
+              super.onNewIntent(in);
+              setIntent(in);
+              lockFlags(in);
+              if (w != null && in != null && in.getBooleanExtra("fromAlarm", false)) {
+                w.evaluateJavascript("window.dispatchEvent(new Event('alarmopened'))", null);
+              }
+            }
+            @Override protected void onCreate(Bundle b) {
+              super.onCreate(b);
+              lockFlags(getIntent());
+              w = new WebView(this);
+              setContentView(w);
+              WebSettings s = w.getSettings();
+              s.setJavaScriptEnabled(true);
+              s.setDomStorageEnabled(true);
+              s.setDatabaseEnabled(true);
+              s.setAllowFileAccess(true);
+              s.setMediaPlaybackRequiresUserGesture(false);
+              w.addJavascriptInterface(new Bridge(this), "AndroidAlarm");
+              w.setWebChromeClient(new WebChromeClient());
+              w.setWebViewClient(new WebViewClient() {
+                @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
+                  String u = r.getUrl().toString();
+                  if (u.startsWith("file:")) return false;
+                  try { startActivity(new Intent(Intent.ACTION_VIEW, r.getUrl())); } catch (Exception e) { }
+                  return true;
+                }
+              });
+              if (b != null) w.restoreState(b); else w.loadUrl("file:///android_asset/index.html");
+            }
+            @Override protected void onSaveInstanceState(Bundle o) {
+              super.onSaveInstanceState(o);
+              w.saveState(o);
+            }
+            @Override public void onBackPressed() {
+              if (w.canGoBack()) w.goBack(); else super.onBackPressed();
+            }
+          }'''
+          j_Bridge = '''package __PKG__;
+          import android.app.Activity;
+          import android.content.Intent;
+          import android.app.NotificationManager;
+          import android.content.Context;
+          import android.content.pm.PackageManager;
+          import android.os.Build;
+          import android.webkit.JavascriptInterface;
+          public class Bridge {
+            private final Activity a;
+            Bridge(Activity a) { this.a = a; }
+            private boolean notifOk() {
+              if (Build.VERSION.SDK_INT < 33) return true;
+              return a.checkSelfPermission("android.permission.POST_NOTIFICATIONS") == PackageManager.PERMISSION_GRANTED;
+            }
+            @JavascriptInterface public boolean permission() { return notifOk(); }
+            @JavascriptInterface public void requestPermission() {
+              if (notifOk()) return;
+              a.runOnUiThread(new Runnable() {
+                @Override public void run() {
+                  a.requestPermissions(new String[] {"android.permission.POST_NOTIFICATIONS"}, 77);
+                }
+              });
+            }
+            @JavascriptInterface public boolean schedule(double id, double timeMs, double repeatMs, String title, String body) {
+              try {
+                requestPermission();
+                return AlarmUtil.schedule(a.getApplicationContext(), (int) id, (long) timeMs, (long) repeatMs, title, body);
+              } catch (Exception e) {
+                return false;
+              }
+            }
+            @JavascriptInterface public boolean fromAlarm() {
+              Intent in = a.getIntent();
+              return in != null && in.getBooleanExtra("fromAlarm", false);
+            }
+            @JavascriptInterface public void stop() {
+              try {
+                NotificationManager nm = (NotificationManager) a.getSystemService(Context.NOTIFICATION_SERVICE);
+                nm.cancelAll();
+              } catch (Exception e) { }
+            }
+            @JavascriptInterface public void cancel(double id) {
+              try { AlarmUtil.cancel(a.getApplicationContext(), (int) id); } catch (Exception e) { }
+            }
+            @JavascriptInterface public void batterySettings() {
+              a.runOnUiThread(new Runnable() {
+                @Override public void run() {
+                  try {
+                    Intent i = new Intent("android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS");
+                    a.startActivity(i);
+                  } catch (Exception e) { }
+                }
+              });
+            }
+          }'''
+          j_AlarmUtil = '''package __PKG__;
+          import android.app.AlarmManager;
+          import android.app.PendingIntent;
+          import android.content.Context;
+          import android.content.Intent;
+          import android.content.SharedPreferences;
+          import java.util.HashSet;
+          import java.util.Set;
+          public class AlarmUtil {
+            static final String PREFS = "alarms";
+            static PendingIntent firePi(Context c, int id, String ti, String b) {
+              Intent i = new Intent(c, AlarmReceiver.class);
+              i.setAction("alarm." + id);
+              i.putExtra("id", id);
+              i.putExtra("title", ti);
+              i.putExtra("body", b);
+              return PendingIntent.getBroadcast(c, id, i, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+            }
+            static void arm(Context c, int id, long t, String ti, String b) {
+              AlarmManager am = (AlarmManager) c.getSystemService(Context.ALARM_SERVICE);
+              Intent open = new Intent(c, MainActivity.class);
+              PendingIntent show = PendingIntent.getActivity(c, 0, open, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+              am.setAlarmClock(new AlarmManager.AlarmClockInfo(t, show), firePi(c, id, ti, b));
+            }
+            static void save(Context c, int id, long t, long r, String ti, String b) {
+              SharedPreferences sp = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+              Set<String> ids = new HashSet<String>(sp.getStringSet("ids", new HashSet<String>()));
+              ids.add(String.valueOf(id));
+              sp.edit().putStringSet("ids", ids).putLong(id + "_t", t).putLong(id + "_r", r).putString(id + "_ti", ti).putString(id + "_b", b).apply();
+            }
+            static void forget(Context c, int id) {
+              SharedPreferences sp = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+              Set<String> ids = new HashSet<String>(sp.getStringSet("ids", new HashSet<String>()));
+              ids.remove(String.valueOf(id));
+              sp.edit().putStringSet("ids", ids).remove(id + "_t").remove(id + "_r").remove(id + "_ti").remove(id + "_b").apply();
+            }
+            static long next(long t, long r, long now) {
+              if (t > now) return t;
+              if (r <= 0) return -1;
+              return t + ((now - t) / r + 1) * r;
+            }
+            static boolean schedule(Context c, int id, long t, long r, String ti, String b) {
+              if (ti == null) ti = "";
+              if (b == null) b = "";
+              long n = next(t, r, System.currentTimeMillis());
+              if (n < 0) return false;
+              save(c, id, n, r, ti, b);
+              arm(c, id, n, ti, b);
+              return true;
+            }
+            static void cancel(Context c, int id) {
+              AlarmManager am = (AlarmManager) c.getSystemService(Context.ALARM_SERVICE);
+              am.cancel(firePi(c, id, "", ""));
+              forget(c, id);
+            }
+            static void afterFire(Context c, int id) {
+              SharedPreferences sp = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+              long t = sp.getLong(id + "_t", 0);
+              long r = sp.getLong(id + "_r", 0);
+              String ti = sp.getString(id + "_ti", "");
+              String b = sp.getString(id + "_b", "");
+              if (r > 0) {
+                long n = next(t, r, System.currentTimeMillis() + 1000);
+                save(c, id, n, r, ti, b);
+                arm(c, id, n, ti, b);
+              } else {
+                forget(c, id);
+              }
+            }
+            static void restoreAll(Context c) {
+              SharedPreferences sp = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+              Set<String> ids = new HashSet<String>(sp.getStringSet("ids", new HashSet<String>()));
+              long now = System.currentTimeMillis();
+              for (String s : ids) {
+                int id;
+                try { id = Integer.parseInt(s); } catch (Exception e) { continue; }
+                long t = sp.getLong(id + "_t", 0);
+                long r = sp.getLong(id + "_r", 0);
+                String ti = sp.getString(id + "_ti", "");
+                String b = sp.getString(id + "_b", "");
+                long n = next(t, r, now);
+                if (n < 0) { forget(c, id); continue; }
+                save(c, id, n, r, ti, b);
+                arm(c, id, n, ti, b);
+              }
+            }
+          }'''
+          j_AlarmReceiver = '''package __PKG__;
+          import android.app.Notification;
+          import android.app.NotificationChannel;
+          import android.app.NotificationManager;
+          import android.app.PendingIntent;
+          import android.content.BroadcastReceiver;
+          import android.content.Context;
+          import android.content.Intent;
+          import android.media.AudioAttributes;
+          import android.media.RingtoneManager;
+          import android.net.Uri;
+          import android.os.Build;
+          public class AlarmReceiver extends BroadcastReceiver {
+            @Override public void onReceive(Context c, Intent i) {
+              int id = i.getIntExtra("id", 0);
+              String ti = i.getStringExtra("title");
+              String b = i.getStringExtra("body");
+              if (ti == null || ti.length() == 0) ti = "Alarm";
+              if (b == null) b = "";
+              try { AlarmUtil.afterFire(c, id); } catch (Exception e) { }
+              NotificationManager nm = (NotificationManager) c.getSystemService(Context.NOTIFICATION_SERVICE);
+              Uri snd = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
+              if (snd == null) snd = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
+              long[] vib = new long[] {0, 700, 400, 700, 400, 700};
+              Intent open = new Intent(c, MainActivity.class);
+              open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+              open.putExtra("fromAlarm", true);
+              PendingIntent pi = PendingIntent.getActivity(c, id, open, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+              Notification.Builder nb;
+              if (Build.VERSION.SDK_INT >= 26) {
+                AudioAttributes aa = new AudioAttributes.Builder()
+                  .setUsage(AudioAttributes.USAGE_ALARM)
+                  .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                  .build();
+                NotificationChannel ch = new NotificationChannel("alarm", "Alarms", NotificationManager.IMPORTANCE_HIGH);
+                ch.setSound(snd, aa);
+                ch.enableVibration(true);
+                ch.setVibrationPattern(vib);
+                ch.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+                nm.createNotificationChannel(ch);
+                nb = new Notification.Builder(c, "alarm");
+                nb.setTimeoutAfter(120000);
+              } else {
+                nb = new Notification.Builder(c);
+                nb.setSound(snd);
+                nb.setVibrate(vib);
+                nb.setPriority(Notification.PRIORITY_MAX);
+              }
+              nb.setSmallIcon(android.R.drawable.ic_lock_idle_alarm);
+              nb.setContentTitle(ti);
+              nb.setContentText(b);
+              nb.setCategory(Notification.CATEGORY_ALARM);
+              nb.setVisibility(Notification.VISIBILITY_PUBLIC);
+              nb.setAutoCancel(true);
+              nb.setContentIntent(pi);
+              nb.setFullScreenIntent(pi, true);
+              Notification n = nb.build();
+              n.flags |= Notification.FLAG_INSISTENT;
+              nm.notify(id, n);
+            }
+          }'''
+          j_BootReceiver = '''package __PKG__;
+          import android.content.BroadcastReceiver;
+          import android.content.Context;
+          import android.content.Intent;
+          public class BootReceiver extends BroadcastReceiver {
+            @Override public void onReceive(Context c, Intent i) {
+              try { AlarmUtil.restoreAll(c); } catch (Exception e) { }
+            }
+          }'''
+          j_Plain = '''package __PKG__;
           import android.app.Activity;
           import android.content.Intent;
           import android.os.Bundle;
@@ -218,9 +491,25 @@ jobs:
               if (w.canGoBack()) w.goBack(); else super.onBackPressed();
             }
           }'''
+          alarm = d.get('alarm') is True
+          perms = '''<uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+          <uses-permission android:name="android.permission.VIBRATE"/>
+          <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+          <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT"/>'''
+          recv = '''<receiver android:name=".AlarmReceiver" android:exported="false"/>
+          <receiver android:name=".BootReceiver" android:exported="true"><intent-filter><action android:name="android.intent.action.BOOT_COMPLETED"/></intent-filter></receiver>'''
+          base_manifest = manifest
+          manifest = base_manifest.replace('__PERMS__', perms if alarm else '').replace('__RECV__', recv if alarm else '')
           open('w/AndroidManifest.xml', 'w', encoding='utf-8').write(manifest.replace('__PKG__', pkg).replace('__LABEL__', name))
-          open('w/src/MainActivity.java', 'w', encoding='utf-8').write(java.replace('__PKG__', pkg))
-          open(os.environ['GITHUB_ENV'], 'a').write('SLUG=%s\n' % slug)
+          if alarm:
+              for n, src in (('MainActivity', j_MainActivity), ('Bridge', j_Bridge), ('AlarmUtil', j_AlarmUtil), ('AlarmReceiver', j_AlarmReceiver), ('BootReceiver', j_BootReceiver)):
+                  open('w/src/%s.java' % n, 'w', encoding='utf-8').write(src.replace('__PKG__', pkg))
+              os.makedirs('w/plain/src', exist_ok=True)
+              open('w/plain/AndroidManifest.xml', 'w', encoding='utf-8').write(base_manifest.replace('__PERMS__', '').replace('__RECV__', '').replace('__PKG__', pkg).replace('__LABEL__', name))
+              open('w/plain/src/MainActivity.java', 'w', encoding='utf-8').write(j_Plain.replace('__PKG__', pkg))
+          else:
+              open('w/src/MainActivity.java', 'w', encoding='utf-8').write(j_Plain.replace('__PKG__', pkg))
+          open(os.environ['GITHUB_ENV'], 'a').write('SLUG=%s\nALARM=%s\n' % (slug, '1' if alarm else '0'))
           PY
 
       - name: Build and sign
@@ -237,15 +526,29 @@ jobs:
           fi
           KS="$PWD/keystore/release.jks"
           cd w
-          mkdir -p build classes out
-          "$BT/aapt2" compile --dir res -o build/res.zip
-          "$BT/aapt2" link -o build/base.apk -I "$AJ" --manifest AndroidManifest.xml -A assets \
-            --min-sdk-version 24 --target-sdk-version 34 --version-code 1 --version-name 1.0 build/res.zip
-          javac -source 8 -target 8 -Xlint:-options -cp "$AJ" -d classes src/MainActivity.java
-          "$BT/d8" --release --lib "$AJ" --min-api 24 --output build $(find classes -name '*.class')
-          (cd build && zip -q base.apk classes.dex)
-          "$BT/zipalign" -f -p 4 build/base.apk build/aligned.apk
-          "$BT/apksigner" sign --ks "$KS" --ks-pass pass:android --key-pass pass:android --out "out/$SLUG.apk" build/aligned.apk
+          build() {
+            rm -rf build classes out
+            mkdir -p build classes out
+            javac -source 8 -target 8 -Xlint:-options -cp "$AJ" -d classes $(find src -name '*.java') &&
+            "$BT/aapt2" compile --dir res -o build/res.zip &&
+            "$BT/aapt2" link -o build/base.apk -I "$AJ" --manifest AndroidManifest.xml -A assets --min-sdk-version 24 --target-sdk-version 34 --version-code 1 --version-name 1.0 build/res.zip &&
+            "$BT/d8" --release --lib "$AJ" --min-api 24 --output build $(find classes -name '*.class') &&
+            (cd build && zip -q base.apk classes.dex) &&
+            "$BT/zipalign" -f -p 4 build/base.apk build/aligned.apk &&
+            "$BT/apksigner" sign --ks "$KS" --ks-pass pass:android --key-pass pass:android --out "out/$SLUG.apk" build/aligned.apk
+          }
+          if ! build; then
+            if [ "${ALARM:-0}" = "1" ]; then
+              echo "::warning::native alarm build failed, retrying without it"
+              rm -rf src
+              cp -r plain/src src
+              cp plain/AndroidManifest.xml AndroidManifest.xml
+              echo "NOALARM=1" >> "$GITHUB_ENV"
+              build
+            else
+              exit 1
+            fi
+          fi
           "$BT/apksigner" verify --verbose "out/$SLUG.apk"
 
       - name: Publish release
@@ -253,7 +556,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          gh release create "apk-$JOB" "w/out/$SLUG.apk" --title "$SLUG" --notes "Built by AI Studio"
+          gh release create "apk-$JOB" "w/out/$SLUG.apk" --title "$SLUG" --notes "Built by AI Studio${NOALARM:+ [noalarm]}"
           gh release list --limit 100 --json tagName -q '.[5:][].tagName' | xargs -r -n1 gh release delete --cleanup-tag -y || true
 
       - name: Save signing key and clean up
@@ -306,7 +609,7 @@ Mobile first at 360px: box-sizing border-box, flex-wrap, min-width:0, overflow-w
 <final>
 Before you stop: exactly one html block, the file ends with </html>, and every control works.
 </final>`;
-const APPX='\nAPP FONTS: the app is offline, so use NO Google Fonts link and no external resources at all. Use font-family:Vazirmatn,Tahoma,"Segoe UI",sans-serif. This overrides the font rules above.\nAPP TOUCH: add -webkit-tap-highlight-color:transparent, overscroll-behavior:none and user-select:none on buttons; no hover-only actions; touch targets 44px or more; declare height:100vh before height:100dvh as a fallback.';
+const APPX='\nAPP FONTS: the app is offline, so use NO Google Fonts link and no external resources at all. Use font-family:Vazirmatn,Tahoma,"Segoe UI",sans-serif. This overrides the font rules above.\nAPP TOUCH: add -webkit-tap-highlight-color:transparent, overscroll-behavior:none and user-select:none on buttons; no hover-only actions; touch targets 44px or more; declare height:100vh before height:100dvh as a fallback.\nAPP ALARM: use this ONLY when the request involves alarms, reminders or timed notifications that must ring even when the app is closed; for every other app never mention or reference AndroidAlarm at all. The packaged app exposes window.AndroidAlarm (undefined in the preview and in browsers, so always feature-detect it): AndroidAlarm.schedule(id, timeMs, repeatMs, title, body) returns true on success (id is a positive integer under 2000000000; timeMs is an epoch time in the future that you compute as the next occurrence; repeatMs is 0 for once, 86400000 for daily, 604800000 for weekly; for specific weekdays use one id per weekday with repeatMs 604800000; scheduling the same id again replaces it), AndroidAlarm.cancel(id) when an alarm is turned off, edited or deleted, AndroidAlarm.permission() and AndroidAlarm.requestPermission() for the notification permission, AndroidAlarm.batterySettings() opens the battery optimization screen, AndroidAlarm.fromAlarm() is true when the app was opened by a ringing alarm (also listen for the window event alarmopened, which fires when a ringing alarm brings an already running app to the front; in both cases show a big Stop button at the top that calls AndroidAlarm.stop(), which silences the ringing), and also call AndroidAlarm.stop() whenever the user taps any button. On every app start re-schedule all enabled alarms from localStorage with their next occurrence, and show a small note with a button calling batterySettings() so alarms are not killed by the phone. Keep a normal in-page timer as a fallback while the app is open, and when AndroidAlarm is missing show a short note that ringing while closed works only in the installed app.';
 const SYS_S='You are a senior front-end engineer and award-winning designer. Turn a short request into ONE finished, memorable, bug-free website (single index.html, inline CSS and JS). It must feel hand-designed for this specific subject, never templated. SITE: the first screen at 360px shows the core message and ONE clear call to action; every section has a purpose; the page ends with a clear contact or next step. When editing an existing file, change only what was asked and keep everything else intact.\n'+RULES;
 const SYS_A='You are a senior mobile app designer-engineer. Turn a short request into ONE finished Android-style app UI as a single index.html that behaves like a native app when added to the home screen: full-height app shell (100dvh), top app bar, bottom tab bar with 2-5 screens switched by JavaScript, working interactions (lists, forms, counters, timers or whatever the request needs) with state kept in memory and saved to localStorage, Material-like touch feedback, safe-area padding (env(safe-area-inset-*)), viewport-fit=cover, theme-color meta. Mobile only, no desktop layout. WEBVIEW: the file is packaged into an Android WebView app loaded from file:///android_asset/index.html and must work offline: relative paths only, no service worker, no ES modules, no fetch of local files, no file download, print or camera features, data only in localStorage (try/catch), opaque backgrounds, system-font fallbacks. Screens must be visible without a click for the first tab. APP: the app bar and tab bar stay fixed; content scrolls inside main with overscroll-behavior:contain and padding-bottom equal to the tab bar height plus env(safe-area-inset-bottom); the active tab is clearly marked; destructive actions ask for a second tap inside the UI; every empty list shows a friendly message with one action; user data is saved in localStorage so it survives a restart; inputs use the right type or inputmode. Give it a distinctive visual identity (not default Material blue), seed the first screen with realistic invented sample data so it never looks empty. When editing an existing file, change only what was asked and keep everything else intact.\n'+RULES;
 const BRIEF='You are an art director. Given a request and an aesthetic direction, reply with a SHORT design brief (max 120 words, same language as the request): audience and purpose; direction; ONE memorable signature detail; palette as 4 named hex colors (dominant, sharp accent, surface, text with contrast of at least 4.5:1 on the surface); display + body font (Persian: only Vazirmatn, Lalezar, Markazi Text, Noto Naskh Arabic, Noto Sans Arabic or Amiri); background atmosphere; hero idea; sections or screens; one orchestrated entrance motion. Avoid generic choices (centered hero with three identical cards, purple gradient on white, Inter/Roboto). Invent all names. No code.';
@@ -314,6 +617,7 @@ const ENH='You rewrite a short website or app request into a richer, specific, b
 const DIRS=[['auto','خودکار'],['neon cyber-noir with glowing neon accents and glass panels','سایبر نئون'],['editorial magazine: huge type, tight grid, rules','مجله‌ای'],['neo-brutalist: thick borders, flat bold colors, hard shadows','برالیست'],['retro-futuristic: CRT glow, mono type, scanlines','رترو فیوچر'],['luxury minimal: whitespace, refined type, one metallic accent','مینیمال لوکس'],['playful gaming: bold shapes, vivid gradients','گیمینگ']];
 const EX={s:[['ویدیو','یه سایت برای ویدیو بساز: گالری ویدیو، پلیر خفن و لیست پخش'],['فیلم','یه صفحه معرفی برای یه فیلم خیالی با طراحی سینمایی بساز'],['شخصی','یه سایت شخصی برای یه برنامه‌نویس با پروژه‌ها و تماس بساز']],
  a:[['یادداشت','یه اپ یادداشت‌برداری با دسته‌بندی و جستجو'],['تایمر','یه اپ تایمر تمرکز (پومودورو) با آمار روزانه'],['خرج‌ها','یه اپ ثبت خرج روزانه با نمودار ساده']]};
+const MAXOUT=128000;let learned=0;
 const PRO=[{re:/minimax/i,t:1,p:.95,k:40,split:true},{re:/kimi|glm/i,t:1,p:.95},{re:/deepseek/i,t:1,p:1}];
 const sel=$('#model'),prof=()=>PRO.find(x=>x.re.test(sel.value))||{t:1,p:.95};
 const S={s:{html:'',vers:[],errs:[]},a:{html:'',vers:[],errs:[]}};
@@ -352,7 +656,7 @@ function panel(m){
 $('#v1').innerHTML=panel('s');$('#v2').innerHTML=panel('a');
 $('#key').value=L('key')||'';if(L('base'))$('#base').value=L('base');if(L('balurl'))$('#balurl').value=L('balurl');$('#ghtok').value=L('ghtok')||'';$('#ghrepo').value=L('ghrepo')||'';
 ['key','base','balurl','ghtok','ghrepo'].forEach(k=>['change','input'].forEach(ev=>$('#'+k).addEventListener(ev,()=>L(k,$('#'+k).value))));
-sel.addEventListener('change',()=>L('model',sel.value));
+sel.addEventListener('change',()=>{L('model',sel.value);learned=0});
 const log=(m,t,bad,clr)=>{const e=$('#lg'+m);if(clr)e.textContent='';if(!t)return;const d=document.createElement('div');if(bad)d.className='e';d.textContent=t;e.appendChild(d);e.scrollTop=e.scrollHeight};
 const IDS=['apkbuild','gos','goa','fixs','fixa','aps','apa','ups','upa','uns','una','ens','ena','rf'];
 const busy=b=>{IDS.forEach(i=>{const e=$('#'+i);if(e)e.disabled=b});$('#stop').hidden=!b};
@@ -433,7 +737,7 @@ async function ask(msgs,max,label,m){
   const kk=$('#key').value.trim();
   if(!kk)throw new Error('API key رو در تنظیمات وارد کن.');
   if(/[^\x20-\x7E]/.test(kk))throw new Error('API key فقط باید حروف انگلیسی و عدد باشه.');
-  const P=prof();let useK=!!P.k,useS=!!P.split,mx=max;lastCut=false;
+  const P=prof();let useK=!!P.k,useS=!!P.split,mx=learned?Math.min(max,learned):max;lastCut=false;
   for(let t=0;t<5;t++){
     if(stopped)throw new Error('متوقف شد');
     const body={model:sel.value,messages:msgs,stream:true,temperature:P.t||1,top_p:P.p||.95,max_tokens:mx};
@@ -448,7 +752,7 @@ async function ask(msgs,max,label,m){
         const x=await r.text();
         if([408,425,429,500,502,503,504].includes(r.status)&&t<4){log(m,'سرور شلوغه، دوباره تلاش می‌کنم...');await wait(2500*(t+1));continue}
         if(r.status===400||r.status===422){
-          if(/max_tokens|context|too (large|long)|exceed/i.test(x)&&mx>4000){mx=Math.floor(mx/2);continue}
+          if(/max_tokens|context|too (large|long)|exceed/i.test(x)&&mx>4000){mx=Math.floor(mx/2);if(/max_tokens|output/i.test(x)&&!/context|input|prompt/i.test(x))learned=mx;t--;continue}
           if(useK){useK=false;continue}
           if(useS){useS=false;continue}
         }
@@ -602,10 +906,10 @@ async function gen(m,text,fresh,isAuto){
     for(let i=0;i<3;i++){
       if(stopped)throw new Error('متوقف شد');
       log(m,'۲) دارم کد می‌نویسم...');
-      const raw=await ask(msgs,32000,'۲) کد:',m);let h=extract(raw),cut=lastCut;
+      const raw=await ask(msgs,MAXOUT,'۲) کد:',m);let h=extract(raw),cut=lastCut;
       if(h&&!/<\/html>\s*$/i.test(h)){
         log(m,'خروجی نصفه موند؛ ادامه‌ش رو می‌گیرم...',1);
-        const r2=await ask([...msgs,{role:'assistant',content:'```html\n'+h},{role:'user',content:'Continue EXACTLY from the last character above. Output only the remaining code, no repetition, no opening fence. End with </html> and a closing fence.'}],32000,'ادامه:',m);
+        const r2=await ask([...msgs,{role:'assistant',content:'```html\n'+h},{role:'user',content:'Continue EXACTLY from the last character above. Output only the remaining code, no repetition, no opening fence. End with </html> and a closing fence.'}],MAXOUT,'ادامه:',m);
         let add=strip(r2).replace(/^\s*```(?:html)?[ \t]*\n?/i,'').replace(/```[\s\S]*$/,'');
         if(/^\s*<!DOCTYPE/i.test(add)){h=add.trim()}else{let ov=0;const tl=h.slice(-400);for(let k=Math.min(tl.length,add.length);k>=15;k--){if(add.startsWith(tl.slice(tl.length-k))){ov=k;break}}h=(h+add.slice(ov)).trim()}cut=false;
       }
@@ -749,7 +1053,8 @@ let apkAsset=null,apkRun=false;
 function showApk(repo,rel){
   const a=rel.assets[0];apkAsset={repo:repo,a:a,id:rel.tag_name.slice(4)};
   $('#apkdl').hidden=false;const g=$('#apkgh');g.href=rel.html_url;g.hidden=false;
-  am('✅ APK آماده است ('+Math.round(a.size/1024)+' KB). دکمه‌ی دانلود رو بزن و نصبش کن.','var(--c)');
+  const na=/\[noalarm\]/.test(rel.body||'');
+  am((na?'⚠️ آلارم بومی روی گیت‌هاب ساخته نشد، برای همین این نسخه آلارمِ بسته‌بودن اپ رو نداره (لاگ ربات رو ببین). ':'')+'✅ APK آماده است ('+Math.round(a.size/1024)+' KB). دکمه‌ی دانلود رو بزن و نصبش کن.',na?'var(--r)':'var(--c)');
 }
 async function buildApk(){
   const mt=S.a.meta,h=S.a.html;if(!mt||!h)return;
@@ -759,9 +1064,11 @@ async function buildApk(){
   try{
     const nm=($('#apkname').value.trim()||mt.name).slice(0,30);
     const id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-    const payload=JSON.stringify({name:nm,slug:mt.slug,html:h,icon:$('#ic').toDataURL('image/png').split(',')[1]});
-    am('۱/۴ دارم فایل‌ها رو می‌فرستم...');
+    const al=/AndroidAlarm/.test(h);
+    const payload=JSON.stringify({name:nm,slug:mt.slug,html:h,icon:$('#ic').toDataURL('image/png').split(',')[1],alarm:al});
+    am('۱/۴ دارم فایل‌ها رو می‌فرستم...'+(al?' (با آلارم بومی)':''));
     {const pi=(await ghj('/repos/'+repo)).j;if(!pi||pi.private!==true)throw new Error('ریپو خصوصی نیست؛ ساخت متوقف شد.')}
+    if(al){const wf=await ghj('/repos/'+repo+'/contents/.github/workflows/build-apk.yml',{soft:true});let wt='';try{wt=atob(String((wf.j&&wf.j.content)||'').replace(/\s/g,''))}catch(e){}if(!wf.ok||wt.indexOf('studio-wf: alarm-3')<0)throw new Error('ربات گیت‌هاب قدیمیه و آلارم بومی رو نمی‌شناسه. تو تنظیمات «راه‌اندازی خودکار» رو یه بار بزن و دوباره APK بساز.')}
     await ghj('/repos/'+repo+'/contents/jobs/'+id+'.json',{method:'PUT',body:{message:'job '+id,content:b64u(payload)}});
     const info=(await ghj('/repos/'+repo)).j;
     am('۲/۴ دارم ربات رو روشن می‌کنم...');
